@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-purple: #a78bfa;
+    --light-purple: #c4b5fd;
+    --button-hover: #8b5cf6;
+    --border-color: #e5e7eb;
+  }
+}
+
+@layer components {
+  .animate-float {
+    animation: float 12s ease-in-out infinite;
+  }
+  
+  .animate-float-reverse {
+    animation: float 10s ease-in-out infinite reverse;
+  }
+}
+html,
+body {
+  height: 100%;
+}
+
+.wallet-adapter-button-trigger {
+  background: rgb(100, 26, 230) !important;
+  border-radius: 8px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+.wallet-adapter-dropdown-list,
+.wallet-adapter-button {
+  font-family: inherit !important;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(20px, 20px) rotate(5deg); }
+  50% { transform: translate(0, 40px) rotate(0deg); }
+  75% { transform: translate(-20px, 20px) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
