@@ -12,7 +12,7 @@ target/.rustc_info.json
 node_modules
 test-ledger
 .yarn
-target/
+# target/
 dist/
 node_modules/
 .anchor/
