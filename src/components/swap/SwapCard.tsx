@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import TokenSelector  from "./TokenSelect";
+import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { TokenInfo } from "@/types/token-info";
 import { fetchSwapQuote } from "@/utils/token-utils";
@@ -43,6 +43,7 @@ const SwapCard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [activeInput, setActiveInput] = useState<ActiveInput>(ActiveInput.FROM);
   const [isUserActive, setIsUserActive] = useState(false);
+  const [InputBar, setInputBar] = useState(true);
 
   useEffect(() => {
     setFromToken(DEFAULT_TOKENS.SOL);
@@ -50,12 +51,25 @@ const SwapCard: React.FC = () => {
   }, []);
 
   const fetchSwapRate = useCallback(async () => {
-    if (!fromToken || !toToken || !amount || activeInput !== ActiveInput.FROM) return;
+    if (!fromToken || !toToken || !amount || activeInput !== ActiveInput.FROM)
+      return;
 
-    const decimalAmount = convertAmount(amount, fromToken.decimals, ConvertType.DECIMAL);
+    const decimalAmount = convertAmount(
+      amount,
+      fromToken.decimals,
+      ConvertType.DECIMAL
+    );
     try {
-      const quote = await fetchSwapQuote(fromToken.address, toToken.address, decimalAmount);
-      const humanReadableOutAmount = convertAmount(quote.outAmount, toToken.decimals, ConvertType.HUMAN);
+      const quote = await fetchSwapQuote(
+        fromToken.address,
+        toToken.address,
+        decimalAmount
+      );
+      const humanReadableOutAmount = convertAmount(
+        quote.outAmount,
+        toToken.decimals,
+        ConvertType.HUMAN
+      );
       setSwapRate(humanReadableOutAmount);
     } catch (error) {
       console.error("Failed to fetch swap rate:", error);
@@ -65,7 +79,8 @@ const SwapCard: React.FC = () => {
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      if (!fromToken || !toToken || !amount || activeInput !== ActiveInput.FROM) return;
+      if (!fromToken || !toToken || !amount || activeInput !== ActiveInput.FROM)
+        return;
 
       setLoading(true);
       fetchSwapRate().finally(() => setLoading(false));
@@ -80,7 +95,7 @@ const SwapCard: React.FC = () => {
   // }, [fetchSwapRate, isUserActive]);
 
   const handleFromAmountChange = async (value: string) => {
-    setAmount(validateInput(value) || ""); 
+    setAmount(validateInput(value) || "");
     setActiveInput(ActiveInput.FROM);
     setIsUserActive(true);
 
@@ -89,9 +104,21 @@ const SwapCard: React.FC = () => {
       return;
     }
 
-    const decimalAmount = convertAmount(value, fromToken.decimals, ConvertType.DECIMAL);
-    const quote = await fetchSwapQuote(fromToken.address, toToken.address, decimalAmount);
-    const humanReadableOutAmount = convertAmount(quote.outAmount, toToken.decimals, ConvertType.HUMAN);
+    const decimalAmount = convertAmount(
+      value,
+      fromToken.decimals,
+      ConvertType.DECIMAL
+    );
+    const quote = await fetchSwapQuote(
+      fromToken.address,
+      toToken.address,
+      decimalAmount
+    );
+    const humanReadableOutAmount = convertAmount(
+      quote.outAmount,
+      toToken.decimals,
+      ConvertType.HUMAN
+    );
     setSwapRate(humanReadableOutAmount);
   };
 
@@ -105,9 +132,21 @@ const SwapCard: React.FC = () => {
       return;
     }
 
-    const decimalAmount = convertAmount(value, toToken.decimals, ConvertType.DECIMAL);
-    const quote = await fetchSwapQuote(toToken.address, fromToken.address, decimalAmount);
-    const humanReadableInAmount = convertAmount(quote.outAmount, fromToken.decimals, ConvertType.HUMAN);
+    const decimalAmount = convertAmount(
+      value,
+      toToken.decimals,
+      ConvertType.DECIMAL
+    );
+    const quote = await fetchSwapQuote(
+      toToken.address,
+      fromToken.address,
+      decimalAmount
+    );
+    const humanReadableInAmount = convertAmount(
+      quote.outAmount,
+      fromToken.decimals,
+      ConvertType.HUMAN
+    );
     setAmount(humanReadableInAmount);
   };
 
@@ -124,7 +163,11 @@ const SwapCard: React.FC = () => {
     console.log("Swap Quote:", quote);
   };
 
-  const convertAmount = (amount: string, decimals: number, type: ConvertType): string => {
+  const convertAmount = (
+    amount: string,
+    decimals: number,
+    type: ConvertType
+  ): string => {
     if (!amount) return "0";
 
     const amountNumber = parseFloat(amount);
@@ -137,6 +180,19 @@ const SwapCard: React.FC = () => {
     }
   };
 
+  const handleSwapTokens = useCallback(() => {
+    // Swap tokens
+    setFromToken(toToken);
+    setToToken(fromToken);
+    
+    // Swap amounts optimistically
+    setAmount(swapRate || '');
+    setSwapRate(amount);
+    
+    // Force recalculation by marking FROM as active
+    setActiveInput(ActiveInput.FROM);
+  }, [fromToken, toToken, amount, swapRate]);
+
   const SkeletonLoader = () => (
     <div className="animate-pulse h-9">
       <div className="h-6 bg-gray-200 rounded w-24"></div>
@@ -144,9 +200,15 @@ const SwapCard: React.FC = () => {
   );
 
   return (
-    <div className="bg-white rounded-3xl shadow-md p-4 w-full max-w-lg">
+    <div className="bg-white rounded-3xl shadow-md p-4 w-full max-w-lg ">
       {/* From token input */}
-      <div className="bg-gray-50 rounded-2xl p-4 mb-2">
+      {/* 1. Responsive view of the navbar */}
+      {/* 2. Responsive view of the swap card */}
+      {/* 3. Jupiter swap API IMPLEMENTATION */}
+      <div className="bg-gray-50 rounded-2xl p-4 mb-1 border mt-4">
+        <div className="flex justify-between mb-2">
+          <span className="text-sm text-gray-500">You Pay</span>
+        </div>
         <input
           type="text"
           className="w-full bg-transparent border-none text-3xl outline-none"
@@ -155,19 +217,16 @@ const SwapCard: React.FC = () => {
           onChange={(e) => handleFromAmountChange(e.target.value)}
         />
         <div className="flex justify-end">
-          <TokenSelector
-            onSelect={setFromToken}
-            currentToken={fromToken}
-          />
+          <TokenSelector onSelect={setFromToken} currentToken={fromToken} />
         </div>
       </div>
 
       {/* Swap arrow */}
-      <div className="flex justify-center my-2">
-        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center cursor-pointer">
+      <div className="flex justify-center my-1 absolute z-10 right-0 left-0 top-80" onClick={handleSwapTokens}>
+        <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center cursor-pointer border-[5px] border-white">
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -184,9 +243,9 @@ const SwapCard: React.FC = () => {
       </div>
 
       {/* To token input */}
-      <div className="bg-gray-50 rounded-2xl p-4 mb-2">
+      <div className="bg-white rounded-2xl p-4 mb-1 border">
         <div className="flex justify-between mb-2">
-          <span className="text-sm text-gray-500">Buy</span>
+          <span className="text-sm text-gray-500">You Receive</span>
         </div>
         {loading ? (
           <SkeletonLoader />
@@ -197,13 +256,11 @@ const SwapCard: React.FC = () => {
             placeholder="0"
             value={swapRate || ""}
             onChange={(e) => handleToAmountChange(e.target.value)}
+            readOnly
           />
         )}
         <div className="flex justify-end">
-          <TokenSelector
-            onSelect={setToToken}
-            currentToken={toToken}
-          />
+          <TokenSelector onSelect={setToToken} currentToken={toToken} />
         </div>
       </div>
 

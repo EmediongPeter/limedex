@@ -26,7 +26,6 @@ export default function DashboardFeature() {
            ))}
          </div>
        </div> */}
-      lorem ipsum lorem ipsum
     </div>
   )
 }

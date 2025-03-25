@@ -2,7 +2,6 @@
 
 import { TokenInfo } from "@/types/token-info";
 
-
 export function TokenSearchModal({
   tokens,
   isLoading,
@@ -19,7 +18,24 @@ export function TokenSearchModal({
   setSearchQuery: (query: string) => void;
 }) {
   return (
-    <div className="absolute top-full left-0 right-0 mt-0 w-60 bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none rounded-tr-none shadow-xl z-50 max-h-[60vh] overflow-hidden overflow-x-hidden border border-border-color">
+    <div 
+      className="
+        absolute 
+        top-full 
+        left-0 
+        mt-0 
+        bg-white 
+        dark:bg-slate-800 
+        rounded-b-2xl 
+        shadow-xl 
+        z-50 
+        max-h-[60vh] 
+        overflow-hidden 
+        border 
+        border-border-color
+        w-full
+      "
+    >
       <div className="p-4">
         <div className="space-y-2 overflow-y-auto max-h-[50vh]">
           {isLoading ? (
@@ -42,6 +58,47 @@ export function TokenSearchModal({
     </div>
   );
 }
+
+// export function TokenSearchModal({
+//   tokens,
+//   isLoading,
+//   onSelect,
+//   onClose,
+//   searchQuery,
+//   setSearchQuery,
+// }: {
+//   tokens: TokenInfo[];
+//   isLoading: boolean;
+//   onSelect: (token: TokenInfo) => void;
+//   onClose: () => void;
+//   searchQuery: string;
+//   setSearchQuery: (query: string) => void;
+// }) {
+//   return (
+//     <div  className="absolute top-full left-0 mt-0 bg-white dark:bg-slate-800 rounded-b-2xl shadow-xl z-50 max-h-[60vh] overflow-hidden border border-border-color"
+//     style={{ width: 'var(--search-width)' }}>
+//       <div className="p-4">
+//         <div className="space-y-2 overflow-y-auto max-h-[50vh]">
+//           {isLoading ? (
+//             <LoadingSkeleton />
+//           ) : tokens.length === 0 ? (
+//             <div className="text-center py-4 text-gray-500 text-sm">
+//               No tokens found
+//             </div>
+//           ) : (
+//             tokens.map((token) => (
+//               <TokenItem
+//                 key={token.address}
+//                 token={token}
+//                 onSelect={onSelect}
+//               />
+//             ))
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 function LoadingSkeleton() {
   return (

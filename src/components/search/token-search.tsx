@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { TokenSearchModal } from "./token-search-modal";
@@ -7,7 +5,11 @@ import { TokenInfo } from "@/types/token-info";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function TokenSearch() {
+interface TokenSearchProps {
+  mobile?: boolean;
+}
+
+export function TokenSearch({ mobile = false }: TokenSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,60 +50,71 @@ export function TokenSearch() {
   }, []);
 
   return (
-    <div className="relative ml-5">
-      <input
-        ref={inputRef}
-        type="text"
-        placeholder="Search name or paste address"
-        className={`py-2.5 px-4 pl-10 border border-border-color w-96 text-sm outline-none ${
-          isOpen ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
-        }`}
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        onClick={() => setIsOpen(true)}
-        autoFocus
-      />
-      {/* <input
-        ref={inputRef}
-        type="text"
-        className=""
-        placeholder="Search tokens"
-        value={searchQuery}
-        onFocus={() => setIsOpen(true)} // Changed from onClick to onFocus
-        onChange={(e) => setSearchQuery(e.target.value)}
-      /> */}
-
-      {/* Search icon */}
-      <svg
-        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
+    <div className="flex justify-center w-full px-4 max-w-xl mx-auto relative">
+      <div 
+        className="w-full relative"
+        style={{ 
+          '--search-width': mobile ? '100%' : '400px',
+          maxWidth: '100%'
+        } as React.CSSProperties}
       >
-        <path
-          d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Search name or paste address"
+          className={`
+            w-full 
+            py-2 
+            px-3 
+            pl-9 
+            border 
+            border-border-color 
+            text-sm 
+            outline-none 
+            bg-white 
+            dark:bg-slate-800
+            rounded-2xl
+            ${isOpen ? "rounded-b-none" : ""}
+            transition-all
+            duration-200
+          `}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onClick={() => setIsOpen(true)}
         />
-      </svg>
+        
+        {/* Search icon */}
+        <svg
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
 
-      {isOpen && (
-        <TokenSearchModal
-          tokens={filteredTokens}
-          isLoading={isLoading}
-          onSelect={(token) => {
-            // Handle token selection
-            setIsOpen(false);
-          }}
-          onClose={() => setIsOpen(false)}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-        />
-      )}
+        {isOpen && (
+          <TokenSearchModal
+            tokens={filteredTokens}
+            isLoading={isLoading}
+            onSelect={(token) => {
+              // Handle token selection
+              setIsOpen(false);
+            }}
+            onClose={() => setIsOpen(false)}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        )}
+      </div>
     </div>
   );
 }
