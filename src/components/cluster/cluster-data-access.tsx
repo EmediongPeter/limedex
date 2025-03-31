@@ -26,7 +26,8 @@ export enum ClusterNetwork {
 export const defaultClusters: Cluster[] = [
   {
     name: 'devnet',
-    endpoint: clusterApiUrl('devnet'),
+    endpoint: 'https://devnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
+    // endpoint: clusterApiUrl('devnet'),
     network: ClusterNetwork.Devnet,
   },
   { name: 'local', endpoint: 'http://localhost:8899' },
@@ -34,6 +35,12 @@ export const defaultClusters: Cluster[] = [
     name: 'testnet',
     endpoint: clusterApiUrl('testnet'),
     network: ClusterNetwork.Testnet,
+  },
+  {
+    name: 'mainnet',
+    endpoint: 'https://mainnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
+    // endpoint: ☻clusterApiUrl('mainnet-beta'),
+    network: ClusterNetwork.Mainnet,
   },
 ]
 
@@ -98,6 +105,7 @@ export function useCluster() {
 
 function getClusterUrlParam(cluster: Cluster): string {
   let suffix = ''
+  console.log(`custom&customUrl=${encodeURIComponent(cluster.endpoint)}`)
   switch (cluster.network) {
     case ClusterNetwork.Devnet:
       suffix = 'devnet'

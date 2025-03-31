@@ -31,6 +31,7 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
     queryFn: () => connection.getVersion(),
     retry: 1,
   })
+
   if (query.isLoading) {
     return null
   }

@@ -14,6 +14,15 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { ReactNode, useCallback, useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
 
+// import {
+//   PhantomWalletAdapter,
+//   SolflareWalletAdapter,
+//   SolletExtensionWalletAdapter,
+//   SolletWalletAdapter,
+//   TorusWalletAdapter,
+//   TrustWalletAdapter,
+// } from "@solana/wallet-adapter-wallets";
+
 require('@solana/wallet-adapter-react-ui/styles.css')
 
 export const WalletButton = dynamic(async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton, {
@@ -27,6 +36,18 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
     console.error(error)
   }, [])
 
+  // const wallets = useMemo(
+  //   () => [
+  //     new PhantomWalletAdapter(),
+  //     new SolflareWalletAdapter(),
+  //     new SolletExtensionWalletAdapter(),
+  //     new SolletWalletAdapter(),
+  //     new TorusWalletAdapter(),
+  //     new TrustWalletAdapter(),
+  //   ],
+  //   [network]
+  // );
+
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={[]} onError={onError} autoConnect={true}>
@@ -39,6 +60,7 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
 export function useAnchorProvider() {
   const { connection } = useConnection()
   const wallet = useWallet()
+
 
   return new AnchorProvider(connection, wallet as AnchorWallet, { commitment: 'confirmed' })
 }

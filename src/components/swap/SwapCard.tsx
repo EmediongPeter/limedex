@@ -3,8 +3,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { TokenInfo } from "@/types/token-info";
-import { fetchSwapQuote } from "@/utils/token-utils";
+import { fetchSwapQuote, signAndExecuteSwap } from "@/utils/token-utils";
 import { validateInput } from "@/utils/valid-input";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 
 const DEFAULT_TOKENS = {
   SOL: {
@@ -36,14 +37,21 @@ enum ActiveInput {
 }
 
 const SwapCard: React.FC = () => {
+  const wallet = useWallet();
+  
   const [fromToken, setFromToken] = useState<TokenInfo | null>(null);
   const [toToken, setToToken] = useState<TokenInfo | null>(null);
   const [amount, setAmount] = useState("");
   const [swapRate, setSwapRate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [quoteRespponse, setQuoteRespponse] = useState();
   const [activeInput, setActiveInput] = useState<ActiveInput>(ActiveInput.FROM);
   const [isUserActive, setIsUserActive] = useState(false);
   const [InputBar, setInputBar] = useState(true);
+  
+  const { connection } = useConnection();
+
+  // console.log({con: await connection.getAccountInfo(wallet?.publicKey)})
 
   useEffect(() => {
     setFromToken(DEFAULT_TOKENS.SOL);
@@ -71,6 +79,7 @@ const SwapCard: React.FC = () => {
         ConvertType.HUMAN
       );
       setSwapRate(humanReadableOutAmount);
+      setQuoteRespponse(quote)
     } catch (error) {
       console.error("Failed to fetch swap rate:", error);
       setSwapRate(null);
@@ -151,16 +160,14 @@ const SwapCard: React.FC = () => {
   };
 
   const handleSwap = async () => {
+    console.log('passed1')
+    console.log(toToken?.address, {amount})
     if (!fromToken || !toToken || !amount) return;
-
+    // console.log('passed')
     // Fetch swap quote
-    const quote = await fetchSwapQuote(
-      fromToken.address,
-      toToken.address,
-      amount
-    );
-
-    console.log("Swap Quote:", quote);
+    const swap = await signAndExecuteSwap(wallet, quoteRespponse, connection)
+    // wallet.signTransaction
+    // console.log("Swap Quote:", quote);
   };
 
   const convertAmount = (
@@ -210,8 +217,8 @@ const SwapCard: React.FC = () => {
           <span className="text-sm text-gray-500">You Pay</span>
         </div>
         <input
-          type="text"
-          className="w-full bg-transparent border-none text-3xl outline-none"
+          type="number"
+          className="w-full bg-transparent border-red-400 border-[10px] text-3xl outline-none"
           placeholder="0"
           value={amount}
           onChange={(e) => handleFromAmountChange(e.target.value)}
@@ -270,9 +277,10 @@ const SwapCard: React.FC = () => {
         className="w-full py-4 mt-4 text-base font-semibold"
         onClick={handleSwap}
         // disabled={loading || !swapRate}
-        disabled={true}
+        disabled={loading || !wallet.connected || !amount}
       >
-        {loading ? "Loading..." : "Connect wallet"}
+        {/* {swapState.loading ? "Processing..." : wallet.connected ? "Swap" : "Connect Wallet"} */}
+        {loading ? "Processing..." : wallet.connected ? "Swap" : "Connect Wallet"}
       </Button>
     </div>
   );
