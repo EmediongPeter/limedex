@@ -93,7 +93,7 @@ const SwapCard: React.FC = () => {
 
       setLoading(true);
       fetchSwapRate().finally(() => setLoading(false));
-    }, 300); // 300ms debounce
+    }, 500); // 300ms debounce
 
     return () => clearTimeout(debounceTimer);
   }, [fromToken, toToken, amount, activeInput, fetchSwapRate]);
@@ -206,19 +206,21 @@ const SwapCard: React.FC = () => {
     </div>
   );
 
+  console.log({amount})
   return (
     <div className="bg-white rounded-3xl shadow-md p-4 w-full max-w-lg ">
       {/* From token input */}
       {/* 1. Responsive view of the navbar */}
       {/* 2. Responsive view of the swap card */}
       {/* 3. Jupiter swap API IMPLEMENTATION */}
+
       <div className="bg-gray-50 rounded-2xl p-4 mb-1 border mt-4">
         <div className="flex justify-between mb-2">
           <span className="text-sm text-gray-500">You Pay</span>
         </div>
         <input
           type="number"
-          className="w-full bg-transparent border-red-400 border-[10px] text-3xl outline-none"
+          className="w-full bg-transparent text-3xl outline-none"
           placeholder="0"
           value={amount}
           onChange={(e) => handleFromAmountChange(e.target.value)}
