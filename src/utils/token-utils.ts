@@ -1,7 +1,6 @@
 import { TokenInfo } from "@/types/token-info";
 import useSWR from "swr";
 
-import { Jupiter, RouteInfo, signTransaction } from "@jup-ag/core";
 import {
   Connection,
   Keypair,
@@ -55,7 +54,6 @@ import { useConnection } from "@solana/wallet-adapter-react";
 //   const result = await execute();
 //   console.log(`Swap successful: https://solscan.io/tx/${result.txid}`);
 // }
-
 export const fetchTokenPrice = async (mintAddress: string) => {
   const response = await fetch(
     `https://quote-api.jup.ag/v6/price?ids=${mintAddress}&vsToken=USDC`
@@ -131,6 +129,10 @@ export const fetchTokens = async (query: string) => {
   }
 };
 
+const wait = (time: number): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, time));
+};
+
 export const signAndExecuteSwap = async (
   wallet: any,
   quoteResponse: any,
@@ -147,7 +149,7 @@ export const signAndExecuteSwap = async (
     userPublicKey: wallet?.publicKey.toString(),
     wrapAndUnwrapSol: true,
     // platformFeeBps: 15, // Your fee percentage (0.5%)
-    feeAccount: "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3",
+    // feeAccount: "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3",
     // onlyDirectRoutes: true,
     // asLegacyTransaction: true,
     // network: 'devnet',
@@ -186,23 +188,33 @@ export const signAndExecuteSwap = async (
     //   console.error("Transaction simulation failed:", simulation.value.err);
     //   return;
     // }
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
-      programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-    });
-    console.log(tokenAccounts);
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      wallet.publicKey,
+      {
+        programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      }
+    );
+    // console.log(tokenAccounts);
     const simulation = await connection.simulateTransaction(transaction, {
       commitment: "processed",
+      replaceRecentBlockhash: true,
+      sigVerify: false,
     });
 
     // Check if simulation was successful
     if (simulation.value.err) {
       console.error("Transaction simulation failed:", simulation.value.err);
-      return;
+      console.log({ v: simulation.value });
+      // return;
     }
 
-    console.log("Transaction simulation successful.");
+    console.log(
+      "Simulation successful. Estimated fee:",
+      simulation.value
+    );
 
     const signedTransaction = await wallet.signTransaction(transaction);
+    await wallet.signTransaction(transaction);
 
     // console.log(signedTransaction instanceof VersionedTransaction)
     // const simulation = await connection.simulateTransaction(signedTransaction, { commitment: "processed" });
@@ -216,24 +228,60 @@ export const signAndExecuteSwap = async (
     // ).value;
 
     const rawTransaction = signedTransaction.serialize();
-
-    // if (simulation.value.err) {
-    //   throw new Error('Simulate failed: ' + simulation.value.err);
-    // }
     const txid = await connection.sendRawTransaction(rawTransaction, {
       skipPreflight: true,
       maxRetries: 2,
+      preflightCommitment: "confirmed",
     });
-    console.log({ txid });
+    // if (simulation.value.err) {
+    //   throw new Error('Simulate failed: ' + simulation.value.err);
+    // }
+    const controller = new AbortController();
+    const abortableResender = async () => {
+      while (true) {
+        await wait(2000);
+        if (controller.signal.aborted) return;
+        try {
+          await connection.sendRawTransaction(rawTransaction, {
+            skipPreflight: true,
+            maxRetries: 2,
+            preflightCommitment: "confirmed",
+          });
+        } catch (e) {
+          console.warn("Failed to resend", e);
+        }
+      }
+    };
 
-    const confirmation = await connection.confirmTransaction(
-      {
-        blockhash: latestBlockHash.blockhash,
-        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-        signature: txid,
-      },
-      "confirmed"
-    );
+    console.log({ txid });
+    try {
+      abortableResender();
+
+      await Promise.race([
+        connection.confirmTransaction(
+          {
+            blockhash: latestBlockHash.blockhash,
+            lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+            signature: txid,
+            abortSignal: controller.signal,
+          },
+          "confirmed"
+        ),
+        new Promise(async (resolve) => {
+          while (!controller.signal.aborted) {
+            await wait(2000);
+            const status = await connection.getSignatureStatus(txid);
+            if (status?.value?.confirmationStatus === "confirmed") {
+              resolve(status);
+            }
+          }
+        }),
+      ]);
+    } catch (e) {
+      console.error({ retryError: e });
+    }
+
+    // const confirmation = await c
     // const confirmation = await connection.confirmTransaction(
     //   {
     //     blockhash: latestBlockHash.blockhash,
@@ -243,7 +291,7 @@ export const signAndExecuteSwap = async (
     //   "finalized"
     // );
 
-    console.log({ confirmation });
+    // console.log({ confirmation });
 
     console.log(`https://solscan.io/tx/${txid}`);
   } catch (error: any) {
@@ -252,3 +300,17 @@ export const signAndExecuteSwap = async (
     console.log({ errror: error.message });
   }
 };
+
+/**
+ * import { createJupiterApiClient } from '@jup-ag/api';
+
+const jupiterQuoteApi = createJupiterApiClient(config); // config is optional
+Now, you can call methods provided by the API client to interact with Jupiter's API. For example:
+
+jupiterQuoteApi.quoteGet({
+    inputMint: "So11111111111111111111111111111111111111112",
+    outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    amount: "100000000",
+    slippageBps: 100,
+})
+ */
