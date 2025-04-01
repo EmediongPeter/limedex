@@ -25,6 +25,12 @@ export enum ClusterNetwork {
 // To use the mainnet-beta cluster, provide a custom endpoint
 export const defaultClusters: Cluster[] = [
   {
+    name: 'mainnet',
+    endpoint: 'https://mainnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
+    // endpoint: ☻clusterApiUrl('mainnet-beta'),
+    network: ClusterNetwork.Mainnet,
+  },
+  {
     name: 'devnet',
     endpoint: 'https://devnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
     // endpoint: clusterApiUrl('devnet'),
@@ -35,12 +41,6 @@ export const defaultClusters: Cluster[] = [
     name: 'testnet',
     endpoint: clusterApiUrl('testnet'),
     network: ClusterNetwork.Testnet,
-  },
-  {
-    name: 'mainnet',
-    endpoint: 'https://mainnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
-    // endpoint: ☻clusterApiUrl('mainnet-beta'),
-    network: ClusterNetwork.Mainnet,
   },
 ]
 
