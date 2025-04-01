@@ -32,8 +32,8 @@ export const defaultClusters: Cluster[] = [
   },
   {
     name: 'devnet',
-    endpoint: 'https://devnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
-    // endpoint: clusterApiUrl('devnet'),
+    // endpoint: 'https://devnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
+    endpoint: clusterApiUrl('devnet'),
     network: ClusterNetwork.Devnet,
   },
   { name: 'local', endpoint: 'http://localhost:8899' },

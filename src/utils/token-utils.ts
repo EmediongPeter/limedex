@@ -150,9 +150,9 @@ export const signAndExecuteSwap = async (
     wrapAndUnwrapSol: true,
     // platformFeeBps: 15, // Your fee percentage (0.5%)
     // feeAccount: "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3",
-    // onlyDirectRoutes: true,
-    // asLegacyTransaction: true,
-    // network: 'devnet',
+    onlyDirectRoutes: true,
+    asLegacyTransaction: true,
+    network: 'devnet',
   });
   // const tokenAccounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
   //   programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
@@ -205,7 +205,7 @@ export const signAndExecuteSwap = async (
     if (simulation.value.err) {
       console.error("Transaction simulation failed:", simulation.value.err);
       console.log({ v: simulation.value });
-      // return;
+      return;
     }
 
     console.log(

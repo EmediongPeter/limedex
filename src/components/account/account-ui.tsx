@@ -42,6 +42,8 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
   if (query.isLoading) {
     return null
   }
+
+  
   if (query.isError || !query.data) {
     return (
       <div className="alert alert-warning text-warning-content/80 rounded-none flex justify-center">
