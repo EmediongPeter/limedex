@@ -1,14 +1,21 @@
 import { TokenInfo } from "@/types/token-info";
 import useSWR from "swr";
-
+import {
+  getAccount,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID, // Standard SPL Token program
+  TOKEN_2022_PROGRAM_ID, // For Token-2022 tokens
+} from "@solana/spl-token";
 import {
   Connection,
   Keypair,
   PublicKey,
   sendAndConfirmTransaction,
   Transaction,
+  TransactionExpiredBlockheightExceededError,
 } from "@solana/web3.js";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, WalletContextState } from "@solana/wallet-adapter-react";
 import { fetcher } from "./fetcher";
 import axios from "axios";
 import { VersionedTransaction } from "@solana/web3.js";
@@ -56,11 +63,12 @@ import { useConnection } from "@solana/wallet-adapter-react";
 // }
 export const fetchTokenPrice = async (mintAddress: string) => {
   const response = await fetch(
-    `https://quote-api.jup.ag/v6/price?ids=${mintAddress}&vsToken=USDC`
+    `https://api.jup.ag/price/v2?ids=${mintAddress}`
   );
   if (!response.ok) throw new Error("Failed to fetch token price");
   const data = await response.json();
-  return data.data[mintAddress].price;
+  console.log(data);
+  return data.data[mintAddress];
 };
 
 export const fetchSwapQuote = async (
@@ -70,8 +78,8 @@ export const fetchSwapQuote = async (
 ) => {
   try {
     const swapRoutes = await fetch(
-      `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50&restrictIntermediateTokens=true&platformFeeBps=${Number(
-        10
+      `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&restrictIntermediateTokens=true&platformFeeBps=${Number(
+        15
       )}&onlyDirectRoutes=true`
       // `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50&restrictIntermediateTokens=true&platformFeeBps=${Number(10)}&feeAccount=BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4&onlyDirectRoutes=${true}`,
       // `https://ultra-api.jup.ag/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}`
@@ -130,10 +138,73 @@ export const fetchTokens = async (query: string) => {
 };
 
 const wait = (time: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, time));
+  return new Promise((resolve) => setTimeout(resolve, time));
 };
 
-export const signAndExecuteSwap = async (
+async function ensureFeeAccountExists(
+  connection: Connection,
+  wallet: WalletContextState, // From wallet adapter
+  mint: PublicKey,
+  feeAccountOwner: PublicKey,
+  tokenProgram: PublicKey = TOKEN_PROGRAM_ID
+): Promise<PublicKey> {
+  console.log({wallet, w: wallet.signTransaction})
+  if (!wallet.publicKey || !wallet.signTransaction) {
+    throw new Error("Wallet not connected");
+  }
+
+  const feeAccount = await getAssociatedTokenAddress(
+    mint,
+    feeAccountOwner,
+    false,
+    tokenProgram
+  );
+
+  console.log({feeAccount})
+
+  try {
+    const _accInfo = await getAccount(
+      connection,
+      feeAccount,
+      undefined,
+      tokenProgram
+    );
+    console.log({ _accInfo });
+    return feeAccount;
+  } catch (error) {
+    const createIx = createAssociatedTokenAccountInstruction(
+      wallet.publicKey,
+      feeAccount,
+      feeAccountOwner,
+      mint,
+      tokenProgram
+    );
+
+    const tx = new Transaction().add(createIx);
+    tx.feePayer = wallet.publicKey;
+
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+
+    // Sign and send
+    const signedTx = await wallet.signTransaction(tx);
+    const rawTransaction = signedTx.serialize();
+    const txid = await connection.sendRawTransaction(rawTransaction, {
+      skipPreflight: false,
+    });
+
+    // Confirm
+    await connection.confirmTransaction({
+      signature: txid,
+      blockhash,
+      lastValidBlockHeight: (await connection.getBlockHeight()) + 150,
+    });
+    return feeAccount;
+  }
+}
+
+export const signAndExxecuteSwap = async (
   wallet: any,
   quoteResponse: any,
   connection: Connection
@@ -142,23 +213,47 @@ export const signAndExecuteSwap = async (
     console.error("Wallet not connected");
     return;
   }
+  // 1. Determine token program (check your token)
+  const outputMint = new PublicKey(quoteResponse.outputMint);
+  const tokenProgram = TOKEN_PROGRAM_ID; // Default to standard
 
-  // console.log({ n: wallet.connected, wl: wallet?.publicKey.toString(), con: connection.rpcEndpoint });
+  // For Token-2022 tokens you would use:
+  // const tokenProgram = TOKEN_2022_PROGRAM_ID;
+
+  // 2. Your platform's fee account owner key
+  const feeAccountOwner = new PublicKey(
+    "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3"
+  );
+  const feeAccount = await ensureFeeAccountExists(
+    connection,
+    wallet.publicKey, // Payer
+    outputMint,
+    feeAccountOwner,
+    tokenProgram
+  );
+  console.log({
+    n: wallet.connected,
+    wl: wallet?.publicKey.toString(),
+    con: connection.rpcEndpoint,
+  });
   const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
     quoteResponse,
     userPublicKey: wallet?.publicKey.toString(),
     wrapAndUnwrapSol: true,
-    // platformFeeBps: 15, // Your fee percentage (0.5%)
+    platformFeeBps: 15,
+    // feeAccount: feeAccount.toString(),
+    // tokenProgram: tokenProgram.toString() // Your fee percentage (0.5%)
     // feeAccount: "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3",
-    onlyDirectRoutes: true,
-    asLegacyTransaction: true,
-    network: 'devnet',
+    // tokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    // onlyDirectRoutes: true,
+    // asLegacyTransaction: true,
+    // network: 'devnet',
   });
   // const tokenAccounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, {
   //   programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
   // });
 
-  // console.log({tokenAccounts});
+  // console.log({response});
 
   try {
     const swapTransactionBuffer = Buffer.from(
@@ -194,6 +289,8 @@ export const signAndExecuteSwap = async (
         programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
       }
     );
+    // const signedTransaction = await wallet.signTransaction(transaction);
+
     // console.log(tokenAccounts);
     const simulation = await connection.simulateTransaction(transaction, {
       commitment: "processed",
@@ -205,16 +302,13 @@ export const signAndExecuteSwap = async (
     if (simulation.value.err) {
       console.error("Transaction simulation failed:", simulation.value.err);
       console.log({ v: simulation.value });
-      return;
+      // return;
     }
 
-    console.log(
-      "Simulation successful. Estimated fee:",
-      simulation.value
-    );
+    console.log("Simulation successful. Estimated fee:", simulation.value);
 
     const signedTransaction = await wallet.signTransaction(transaction);
-    await wallet.signTransaction(transaction);
+    // await wallet.signTransaction(transaction);
 
     // console.log(signedTransaction instanceof VersionedTransaction)
     // const simulation = await connection.simulateTransaction(signedTransaction, { commitment: "processed" });
@@ -300,7 +394,127 @@ export const signAndExecuteSwap = async (
     console.log({ errror: error.message });
   }
 };
+export const signAndExecuteSwap = async (
+  wallet: any,
+  quoteResponse: any,
+  connection: Connection,
+  maxRetries = 3
+) => {
+  if (!wallet.connected || !wallet.signTransaction || !wallet.publicKey) {
+    throw new Error("Wallet not connected");
+  }
 
+  let attempt = 0;
+  let lastError: Error | unknown | null = null;
+
+  const outputMint = new PublicKey(quoteResponse.outputMint);
+  const tokenProgram = TOKEN_PROGRAM_ID;
+
+  while (attempt < maxRetries) {
+    attempt++;
+    try {
+      // 1. Get fresh blockhash for each attempt
+      const latestBlockHash = await connection.getLatestBlockhash();
+
+      const feeAccountOwner = new PublicKey(
+        "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3"
+      );
+      const feeAccount = await ensureFeeAccountExists(
+        connection,
+        wallet, // Payer
+        outputMint,
+        feeAccountOwner,
+        tokenProgram
+      );
+      // 2. Get fresh swap transaction (important for retries)
+      const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
+        quoteResponse,
+        userPublicKey: wallet.publicKey.toString(),
+        wrapAndUnwrapSol: true,
+        // onlyDirectRoutes: true,
+        // asLegacyTransaction: true,
+        // network: "devnet",
+        feeAccount
+
+        // Include other parameters
+      });
+
+      const swapTransaction = VersionedTransaction.deserialize(
+        Buffer.from(response.data.swapTransaction, "base64")
+      );
+
+      const simulation = await connection.simulateTransaction(swapTransaction, {
+        commitment: "processed",
+        replaceRecentBlockhash: true,
+        sigVerify: false,
+      });
+
+      // Check if simulation was successful
+      if (simulation.value.err) {
+        console.error("Transaction simulation failed:", simulation.value.err);
+        console.log({ v: simulation.value });
+        // return;
+      }
+
+      console.log("Simulation successful. Estimated fee:", simulation.value);
+
+      // 3. Sign with fresh blockhash
+      const signedTx = await wallet.signTransaction(swapTransaction);
+
+      // 4. Send with skipPreflight=false for better reliability
+      const txid = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        maxRetries: 2,
+      });
+
+      console.log({ txid });
+
+      // 5. Enhanced confirmation with timeout
+      const result = await connection.confirmTransaction(
+        {
+          signature: txid,
+          blockhash: latestBlockHash.blockhash,
+          lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        },
+        "confirmed"
+      );
+
+      console.log({ result });
+      if (result.value.err) {
+        throw new Error(`Transaction failed: ${result.value.err}`);
+      }
+
+      return txid; // Success case
+    } catch (error) {
+      lastError = error;
+      console.warn(`Attempt ${attempt} failed:`, error);
+
+      // Specific handling for blockheight exceeded
+      if (error instanceof TransactionExpiredBlockheightExceededError) {
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+        continue;
+      }
+
+      // For other errors, decide whether to retry
+      if (shouldRetryError(error)) {
+        continue;
+      }
+      break;
+    }
+  }
+
+  throw lastError || new Error("Max retries exceeded");
+};
+
+// Helper function to determine retryable errors
+function shouldRetryError(error: any): boolean {
+  return (
+    error instanceof TransactionExpiredBlockheightExceededError ||
+    error.message.includes("Blockhash not found") ||
+    error.message.includes("was not confirmed")
+  );
+}
 /**
  * import { createJupiterApiClient } from '@jup-ag/api';
 
