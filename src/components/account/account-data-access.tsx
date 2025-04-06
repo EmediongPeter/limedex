@@ -15,13 +15,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useTransactionToast } from '../ui/ui-layout'
 
-export function useGetBalance({ address }: { address: PublicKey }) {
+export function useGetBalance({ address }: { address: PublicKey | null | undefined }) {
   const { connection } = useConnection()
-
+  
   return useQuery({
-    queryKey: ['get-balance', { endpoint: connection.rpcEndpoint, address }],
-    queryFn: () => connection.getBalance(address),
-  })
+    queryKey: ["get-balance", connection.rpcEndpoint, address?.toString()],
+    queryFn: async () => {
+      if (!address) return 0;
+      return connection.getBalance(address);
+    },
+    enabled: !!address,
+    staleTime: 30_000, // 30 seconds cache
+  });
 }
 
 export function useGetSignatures({ address }: { address: PublicKey }) {
@@ -33,12 +38,14 @@ export function useGetSignatures({ address }: { address: PublicKey }) {
   })
 }
 
-export function useGetTokenAccounts({ address }: { address: PublicKey }) {
+export function useGetTokenAccounts({ address }: { address: PublicKey | null | undefined }) {
   const { connection } = useConnection()
-
+  
   return useQuery({
-    queryKey: ['get-token-accounts', { endpoint: connection.rpcEndpoint, address }],
+    queryKey: ["get-token-accounts", connection.rpcEndpoint, address?.toString()],
     queryFn: async () => {
+      if (!address) return [];
+
       const [tokenAccounts, token2022Accounts] = await Promise.all([
         connection.getParsedTokenAccountsByOwner(address, {
           programId: TOKEN_PROGRAM_ID,
@@ -46,10 +53,14 @@ export function useGetTokenAccounts({ address }: { address: PublicKey }) {
         connection.getParsedTokenAccountsByOwner(address, {
           programId: TOKEN_2022_PROGRAM_ID,
         }),
-      ])
-      return [...tokenAccounts.value, ...token2022Accounts.value]
+      ]);
+
+      return [...tokenAccounts.value, ...token2022Accounts.value];
     },
-  })
+    enabled: !!address,
+    staleTime: 30_000, // 30 seconds cache
+  });
+  
 }
 
 export function useTransferSol({ address }: { address: PublicKey }) {

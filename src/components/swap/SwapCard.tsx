@@ -7,6 +7,12 @@ import { fetchSwapQuote, signAndExecuteSwap } from "@/utils/token-utils";
 import { validateInput } from "@/utils/valid-input";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import SwapDetails from "./SwapDetails";
+import {
+  useGetBalance,
+  useGetTokenAccounts,
+} from "../account/account-data-access";
+import { checkBalance } from "@/utils/balance-check";
+import SwapButton from "./SwapButton";
 
 const DEFAULT_TOKENS = {
   SOL: {
@@ -40,6 +46,9 @@ enum ActiveInput {
 const SwapCard: React.FC = () => {
   const wallet = useWallet();
   const { connection } = useConnection();
+  const solBalance  = useGetBalance({ address: wallet.publicKey })
+  const tokenAccounts = useGetTokenAccounts({ address: wallet.publicKey })
+  
 
   // Consolidated state to reduce render triggers
   const [swapState, setSwapState] = useState({
@@ -54,165 +63,198 @@ const SwapCard: React.FC = () => {
   });
 
   // Convert amount helper - memoized to prevent recreations
-  const convertAmount = useCallback((
-    amount: string,
-    decimals: number,
-    type: ConvertType
-  ): string => {
-    if (!amount) return "0";
+  const convertAmount = useCallback(
+    (amount: string, decimals: number, type: ConvertType): string => {
+      if (!amount) return "0";
 
-    const amountNumber = parseFloat(amount);
-    if (isNaN(amountNumber)) return "0";
+      const amountNumber = parseFloat(amount);
+      if (isNaN(amountNumber)) return "0";
 
-    if (type === ConvertType.DECIMAL) {
-      return (amountNumber * Math.pow(10, decimals)).toString();
-    } else {
-      return (amountNumber / Math.pow(10, decimals)).toString();
-    }
-  }, []);
+      if (type === ConvertType.DECIMAL) {
+        return (amountNumber * Math.pow(10, decimals)).toString();
+      } else {
+        return (amountNumber / Math.pow(10, decimals)).toString();
+      }
+    },
+    []
+  );
 
   // Memoized fetch function to prevent unnecessary recreations
-  const fetchQuote = useCallback(async (
-    fromToken: TokenInfo,
-    toToken: TokenInfo,
-    inputAmount: string,
-    isFromInput: boolean
-  ) => {
-    if (!fromToken || !toToken || !inputAmount) return null;
+  const fetchQuote = useCallback(
+    async (
+      fromToken: TokenInfo,
+      toToken: TokenInfo,
+      inputAmount: string,
+      isFromInput: boolean
+    ) => {
+      if (
+        !fromToken ||
+        !toToken ||
+        !inputAmount ||
+        parseFloat(inputAmount) <= 0
+      )
+        return null;
+      try {
+        setSwapState((prev) => ({ ...prev, loading: true }));
 
-    try {
-      setSwapState(prev => ({ ...prev, loading: true }));
-      
-      let sourceToken, destinationToken, amount;
-      
-      if (isFromInput) {
-        sourceToken = fromToken.address;
-        destinationToken = toToken.address;
-        amount = convertAmount(inputAmount, fromToken.decimals, ConvertType.DECIMAL);
-      } else {
-        sourceToken = toToken.address;
-        destinationToken = fromToken.address;
-        amount = convertAmount(inputAmount, toToken.decimals, ConvertType.DECIMAL);
+        let sourceToken, destinationToken, amount;
+
+        if (isFromInput) {
+          sourceToken = fromToken.address;
+          destinationToken = toToken.address;
+          amount = convertAmount(
+            inputAmount,
+            fromToken.decimals,
+            ConvertType.DECIMAL
+          );
+        } else {
+          sourceToken = toToken.address;
+          destinationToken = fromToken.address;
+          amount = convertAmount(
+            inputAmount,
+            toToken.decimals,
+            ConvertType.DECIMAL
+          );
+        }
+
+        const quote = await fetchSwapQuote(
+          sourceToken,
+          destinationToken,
+          amount
+        );
+
+        return {
+          quote,
+          isFromInput,
+          fromToken,
+          toToken,
+        };
+      } catch (error) {
+        console.error("Failed to fetch swap quote:", error);
+        return null;
+      } finally {
+        setSwapState((prev) => ({ ...prev, loading: false }));
       }
-      
-      const quote = await fetchSwapQuote(sourceToken, destinationToken, amount);
-      
-      return {
-        quote,
-        isFromInput,
-        fromToken,
-        toToken
-      };
-    } catch (error) {
-      console.error("Failed to fetch swap quote:", error);
-      return null;
-    } finally {
-      setSwapState(prev => ({ ...prev, loading: false }));
-    }
-  }, [convertAmount]);
+    },
+    [convertAmount]
+  );
 
   // Handler for from amount changes with proper debouncing
-  const handleFromAmountChange = useCallback((value: string) => {
-    const validValue = validateInput(value) || "";
-    
-    // Update the input immediately for responsiveness
-    setSwapState(prev => ({
-      ...prev,
-      amount: validValue,
-      activeInput: ActiveInput.FROM,
-      // Clear existing timeout if any
-      fetchTimerId: prev.fetchTimerId ? (() => {
-        clearTimeout(prev.fetchTimerId!);
-        return null;
-      })() : null
-    }));
-    
-    // Only proceed with API call if we have valid inputs
-    if (!validValue) {
-      setSwapState(prev => ({ ...prev, swapRate: null, quoteResponse: undefined }));
-      return;
-    }
-    
-    // Set up new debounced API call
-    const timerId = setTimeout(async () => {
-      const result = await fetchQuote(
-        swapState.fromToken,
-        swapState.toToken,
-        validValue,
-        true
-      );
-      
-      if (result) {
-        const humanReadableOutAmount = convertAmount(
-          result.quote.outAmount,
-          result.toToken.decimals,
-          ConvertType.HUMAN
-        );
-        
-        setSwapState(prev => ({
+  const handleFromAmountChange = useCallback(
+    (value: string) => {
+      const validValue = validateInput(value) || "";
+
+      // Update the input immediately for responsiveness
+      setSwapState((prev) => ({
+        ...prev,
+        amount: validValue,
+        activeInput: ActiveInput.FROM,
+        // Clear existing timeout if any
+        fetchTimerId: prev.fetchTimerId
+          ? (() => {
+              clearTimeout(prev.fetchTimerId!);
+              return null;
+            })()
+          : null,
+      }));
+
+      // Only proceed with API call if we have valid inputs
+      if (!validValue) {
+        setSwapState((prev) => ({
           ...prev,
-          swapRate: humanReadableOutAmount,
-          quoteResponse: result.quote
+          swapRate: null,
+          quoteResponse: undefined,
         }));
+        return;
       }
-    }, 500);
-    
-    // Update the timer ID in state
-    setSwapState(prev => ({ ...prev, fetchTimerId: timerId }));
-  }, [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]);
+
+      // Set up new debounced API call
+      const timerId = setTimeout(async () => {
+        const result = await fetchQuote(
+          swapState.fromToken,
+          swapState.toToken,
+          validValue,
+          true
+        );
+
+        if (result) {
+          const humanReadableOutAmount = convertAmount(
+            result.quote.outAmount,
+            result.toToken.decimals,
+            ConvertType.HUMAN
+          );
+
+          setSwapState((prev) => ({
+            ...prev,
+            swapRate: humanReadableOutAmount,
+            quoteResponse: result.quote,
+          }));
+        }
+      }, 500);
+
+      // Update the timer ID in state
+      setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
+    },
+    [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]
+  );
 
   // Handler for to amount changes with debouncing
-  const handleToAmountChange = useCallback((value: string) => {
-    const validValue = validateInput(value) || "";
-    
-    setSwapState(prev => ({
-      ...prev,
-      swapRate: validValue,
-      activeInput: ActiveInput.TO,
-      fetchTimerId: prev.fetchTimerId ? (() => {
-        clearTimeout(prev.fetchTimerId!);
-        return null;
-      })() : null
-    }));
-    
-    if (!validValue) {
-      setSwapState(prev => ({ ...prev, amount: "" }));
-      return;
-    }
-    
-    const timerId = setTimeout(async () => {
-      const result = await fetchQuote(
-        swapState.fromToken,
-        swapState.toToken,
-        validValue,
-        false
-      );
-      
-      if (result) {
-        const humanReadableInAmount = convertAmount(
-          result.quote.outAmount,
-          result.fromToken.decimals,
-          ConvertType.HUMAN
-        );
-        
-        setSwapState(prev => ({ ...prev, amount: humanReadableInAmount }));
+  const handleToAmountChange = useCallback(
+    (value: string) => {
+      const validValue = validateInput(value) || "";
+
+      setSwapState((prev) => ({
+        ...prev,
+        swapRate: validValue,
+        activeInput: ActiveInput.TO,
+        fetchTimerId: prev.fetchTimerId
+          ? (() => {
+              clearTimeout(prev.fetchTimerId!);
+              return null;
+            })()
+          : null,
+      }));
+
+      if (!validValue) {
+        setSwapState((prev) => ({ ...prev, amount: "" }));
+        return;
       }
-    }, 500);
-    
-    setSwapState(prev => ({ ...prev, fetchTimerId: timerId }));
-  }, [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]);
+
+      const timerId = setTimeout(async () => {
+        const result = await fetchQuote(
+          swapState.fromToken,
+          swapState.toToken,
+          validValue,
+          false
+        );
+
+        if (result) {
+          const humanReadableInAmount = convertAmount(
+            result.quote.outAmount,
+            result.fromToken.decimals,
+            ConvertType.HUMAN
+          );
+
+          setSwapState((prev) => ({ ...prev, amount: humanReadableInAmount }));
+        }
+      }, 500);
+
+      setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
+    },
+    [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]
+  );
 
   // Swap tokens handler
   const handleSwapTokens = useCallback(() => {
-    setSwapState(prev => {
+    setSwapState((prev) => {
       // Swap tokens
       const newFromToken = prev.toToken;
       const newToToken = prev.fromToken;
-      
+
       // Swap amounts
       const newAmount = prev.swapRate || "";
       const newSwapRate = prev.amount || "";
-      
+
       return {
         ...prev,
         fromToken: newFromToken,
@@ -222,7 +264,7 @@ const SwapCard: React.FC = () => {
         activeInput: ActiveInput.FROM,
         // Reset loading state and quote
         loading: false,
-        quoteResponse: undefined
+        quoteResponse: undefined,
       };
     });
   }, []);
@@ -230,9 +272,9 @@ const SwapCard: React.FC = () => {
   // Handle swap execution
   const handleSwap = useCallback(async () => {
     const { fromToken, toToken, amount, quoteResponse } = swapState;
-    
+
     if (!fromToken || !toToken || !amount || !quoteResponse) return;
-    
+
     try {
       const swap = await signAndExecuteSwap(wallet, quoteResponse, connection);
       console.log("Swap executed:", swap);
@@ -243,32 +285,38 @@ const SwapCard: React.FC = () => {
     }
   }, [swapState, wallet, connection]);
 
-  // Token selector handlersa
+  // Token selector handlers
   const handleFromTokenSelect = useCallback((token: TokenInfo) => {
-    setSwapState(prev => ({
+    setSwapState((prev) => ({
       ...prev,
       fromToken: {
         ...token,
-        icon: token.icon || '' // Provide a default empty string if undefined
+        icon: token.icon || "", // Provide a default empty string if undefined
       },
       amount: "",
       swapRate: null,
-      quoteResponse: undefined
+      quoteResponse: undefined,
     }));
   }, []);
 
   const handleToTokenSelect = useCallback((token: TokenInfo) => {
-    setSwapState(prev => ({
+    setSwapState((prev) => ({
       ...prev,
-      fromToken: {
+      toToken: {
         ...token,
-        icon: token.icon || '' // Provide a default empty string if undefined
+        icon: token.icon || "", // Provide a default empty string if undefined
       },
       amount: "",
       swapRate: null,
-      quoteResponse: undefined
+      quoteResponse: undefined,
     }));
   }, []);
+
+  // Check wallet connection before balance check
+  const isWalletConnected = !!wallet.publicKey;
+
+  const hasSufficientBalance = checkBalance(swapState.amount, solBalance.data, tokenAccounts.data, swapState.fromToken.decimals, swapState.fromToken.address)
+  console.log({bal: hasSufficientBalance})
 
   // Cleanup on unmount
   useEffect(() => {
@@ -278,19 +326,18 @@ const SwapCard: React.FC = () => {
       }
     };
   }, [swapState.fetchTimerId]);
+
   const SkeletonLoader = () => (
     <div className="animate-pulse h-9">
       <div className="h-6 bg-gray-200 rounded w-24"></div>
     </div>
   );
 
-  const { 
-    fromToken, toToken, amount, swapRate, loading, quoteResponse 
-  } = swapState;
+  const { fromToken, toToken, amount, swapRate, loading, quoteResponse } =
+    swapState;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-md p-4 sm:p-6 w-full max-w-lg mx-auto transition-all duration-300">
-
       {/* From token input */}
       {/* 1. Responsive view of the navbar */}
       {/* 2. Responsive view of the swap card */}
@@ -310,7 +357,10 @@ const SwapCard: React.FC = () => {
           onChange={(e) => handleFromAmountChange(e.target.value)}
         />
         <div className="flex justify-end">
-          <TokenSelector onSelect={handleFromTokenSelect} currentToken={fromToken} />
+          <TokenSelector
+            onSelect={handleFromTokenSelect}
+            currentToken={fromToken}
+          />
         </div>
       </div>
 
@@ -360,26 +410,48 @@ const SwapCard: React.FC = () => {
           />
         )}
         <div className="flex justify-end">
-          <TokenSelector onSelect={handleToTokenSelect} currentToken={toToken} />
+          <TokenSelector
+            onSelect={handleToTokenSelect}
+            currentToken={toToken}
+          />
         </div>
       </div>
 
-      {/* <SwapDetails
+      <SwapDetails
         fromAmount={amount}
         fromToken={fromToken}
         toToken={toToken}
         swapRate={swapRate}
         quoteResponse={quoteResponse}
-      /> */}
-
+      />
       {/* Action button */}
-      <Button
+      <SwapButton
+        onClick={handleSwap}
+        disabled={
+          !wallet.connected ||
+          !swapState.amount ||
+          !swapState.swapRate ||
+          !hasSufficientBalance ||
+          swapState.loading
+        }
+        loading={swapState.loading}
+        walletConnected={wallet.connected}
+        hasSufficientBalance={hasSufficientBalance}
+        // balanceError={balanceError}
+      />
+      {/* <Button
         variant="primary"
         className="w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300"
         onClick={handleSwap}
-        disabled={loading || !wallet.connected || !amount || !swapRate}
+        disabled={
+          swapState.loading ||
+          !wallet.connected ||
+          !swapState.amount ||
+          !swapState.swapRate ||
+          !hasSufficientBalance
+        }
       >
-        {loading ? (
+        {swapState.loading ? (
           <span className="flex items-center justify-center">
             <svg
               className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -403,28 +475,22 @@ const SwapCard: React.FC = () => {
             </svg>
             Processing...
           </span>
-        ) : wallet.connected ? (
-          "Swap"
-        ) : (
+        ) : !wallet.connected ? (
           "Connect Wallet"
+        ) : hasSufficientBalance === null ? (
+          "Swap"
+        ) : !hasSufficientBalance ? (
+          balanceError
+        ) : (
+          "Swap"
         )}
-      </Button>
+      </Button> */}
     </div>
   );
 };
-
+/**
+ * !hasSufficientBalance ? (
+          balanceError || "Insufficient Balance"
+        ) :
+ */
 export default SwapCard;
-// const handleSwap = async () => {
-//   if (!fromToken || !toToken || !amount) return;
-
-//   // Fetch token prices
-//   const fromPrice = await fetchTokenPrice(fromToken.address);
-//   const toPrice = await fetchTokenPrice(toToken.address);
-
-//   // Fetch swap quote
-//   const quote = await fetchSwapQuote(fromToken.address, toToken.address, amount);
-
-//   console.log("Swap Quote:", quote);
-//   console.log("From Price:", fromPrice);
-//   console.log("To Price:", toPrice);
-// };

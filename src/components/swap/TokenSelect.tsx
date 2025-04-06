@@ -3,17 +3,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import { TokenInfo } from "@/types/token-info";
-import { fetchTokens } from "@/utils/token-utils";
+import { debounce } from "@/utils/utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-const debounce = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout;
-  return (...args: any[]) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-};
 
 const TokenSelector = React.memo(({
   onSelect,
