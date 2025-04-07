@@ -13,6 +13,9 @@ import {
 } from "../account/account-data-access";
 import { checkBalance } from "@/utils/balance-check";
 import SwapButton from "./SwapButton";
+import { useNotificationToast, useTransactionToast } from "../ui/ui-layout";
+import toast, { useToaster } from "react-hot-toast";
+import { useCustomToasts } from "../ui/Toast";
 
 const DEFAULT_TOKENS = {
   SOL: {
@@ -46,9 +49,12 @@ enum ActiveInput {
 const SwapCard: React.FC = () => {
   const wallet = useWallet();
   const { connection } = useConnection();
-  const solBalance  = useGetBalance({ address: wallet.publicKey })
-  const tokenAccounts = useGetTokenAccounts({ address: wallet.publicKey })
-  
+  const solBalance = useGetBalance({ address: wallet.publicKey });
+  const tokenAccounts = useGetTokenAccounts({ address: wallet.publicKey });
+  const transactionToast = useTransactionToast();
+  const notificationToast = useNotificationToast();
+  // const toast = useToaster();
+  const { showSuccessToast, showErrorToast, showLoadingToast } = useCustomToasts(toast);
 
   // Consolidated state to reduce render triggers
   const [swapState, setSwapState] = useState({
@@ -273,15 +279,26 @@ const SwapCard: React.FC = () => {
   const handleSwap = useCallback(async () => {
     const { fromToken, toToken, amount, quoteResponse } = swapState;
 
-    if (!fromToken || !toToken || !amount || !quoteResponse) return;
-
+    if (!fromToken || !toToken || !amount || !quoteResponse)
+      return "not available";
+    setSwapState((prev) => ({ ...prev, loading: true }));
     try {
-      const swap = await signAndExecuteSwap(wallet, quoteResponse, connection);
-      console.log("Swap executed:", swap);
-      // Handle successful swap (clear form, show success message, etc.)
-    } catch (error) {
+      // Show loading toast
+      showLoadingToast("Waiting for wallet confirmation...");
+  
+      const swapTxId = await signAndExecuteSwap(wallet, quoteResponse, connection);
+      
+      // Show success toast with transaction link
+      showSuccessToast(swapTxId);
+      
+      console.log("Swap executed:", swapTxId);
+    } catch (error: any) {
+      // Show error toast
+      showErrorToast(error.message || "Swap failed");
       console.error("Swap execution failed:", error);
-      // Handle error (display error message, etc.)
+    } finally {
+      setSwapState((prev) => ({ ...prev, loading: false }));
+
     }
   }, [swapState, wallet, connection]);
 
@@ -315,8 +332,13 @@ const SwapCard: React.FC = () => {
   // Check wallet connection before balance check
   const isWalletConnected = !!wallet.publicKey;
 
-  const hasSufficientBalance = checkBalance(swapState.amount, solBalance.data, tokenAccounts.data, swapState.fromToken.decimals, swapState.fromToken.address)
-  console.log({bal: hasSufficientBalance})
+  const hasSufficientBalance = checkBalance(
+    swapState.amount,
+    solBalance.data,
+    tokenAccounts.data,
+    swapState.fromToken.decimals,
+    swapState.fromToken.address
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -335,7 +357,6 @@ const SwapCard: React.FC = () => {
 
   const { fromToken, toToken, amount, swapRate, loading, quoteResponse } =
     swapState;
-
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-md p-4 sm:p-6 w-full max-w-lg mx-auto transition-all duration-300">
       {/* From token input */}

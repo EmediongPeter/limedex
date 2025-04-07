@@ -6,7 +6,7 @@ interface SwapButtonProps {
   disabled?: boolean;
   loading?: boolean;
   walletConnected?: boolean;
-  hasSufficientBalance?: boolean;
+  hasSufficientBalance?: boolean | undefined;
   balanceError?: string;
 }
 
@@ -15,32 +15,37 @@ const SwapButton: React.FC<SwapButtonProps> = ({
   disabled = false,
   loading = false,
   walletConnected = false,
-  hasSufficientBalance = true,
+  hasSufficientBalance,
   balanceError,
 }) => {
+  console.log({hasSufficientBalance, loading, disabled})
   const getButtonText = () => {
     if (loading) return "Processing...";
     if (!walletConnected) return "Connect Wallet";
     if (hasSufficientBalance === false) return balanceError || "Insufficient Balance";
+    if (hasSufficientBalance === undefined) return "Enter amount"
     return "Swap";
   };
-
   return (
     <Button
-      variant="primary"
-      className="w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300"
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {loading ? (
-        <span className="flex items-center justify-center">
-          <Spinner className="mr-2" />
-          {getButtonText()}
-        </span>
-      ) : (
-        getButtonText()
-      )}
-    </Button>
+  variant="primary"
+  className={`
+    w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300
+    ${disabled ? 'opacity-60 cursor-not-allowed bg-opacity-80' : 'hover:bg-opacity-90'}
+  `}
+  onClick={onClick}
+  disabled={disabled}
+  // title={disabled ? "This action is currently unavailable" : ""}
+>
+  {loading ? (
+    <span className="flex items-center justify-center">
+      <Spinner className="mr-2" />
+      {getButtonText()}
+    </span>
+  ) : (
+    getButtonText()
+  )}
+</Button>
   );
 };
 

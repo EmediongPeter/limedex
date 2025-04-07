@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { ReactNode, Suspense, useEffect, useRef } from "react";
-import toast, { Toaster } from "react-hot-toast";
-
+import toast, { LoaderIcon, Toaster } from "react-hot-toast";
 import { AccountChecker } from "../account/account-ui";
 import {
   ClusterChecker,
@@ -164,7 +163,7 @@ export function UiLayout({
         >
           {children}
         </Suspense>
-        <Toaster position="bottom-right" />
+        <Toaster position="bottom-left" />
       </div>
       <div className="hidden">
         <li>
@@ -360,7 +359,35 @@ export function useTransactionToast() {
           label={"View Transaction"}
           className="btn btn-xs btn-primary"
         />
-      </div>
+      </div>,
+      {
+        duration: 60000, // 60,000 milliseconds = 1 minute
+        // Other options may go here depending on your toast library
+      }
     );
+  };
+}
+
+export function useNotificationToast() {
+  return () => {
+    toast.loading(
+      <div className={"text-center"}>
+        <div className="text-lg">
+          {/* <LoaderIcon /> */}
+          Wallet sign pending
+        </div>
+        {/* <ExplorerLink
+          path={`tx/${signature}`}
+          label={"View Transaction"}
+          className="btn btn-xs btn-primary"
+        /> */}
+      </div>,
+      {
+        duration: 60000, // 60,000 milliseconds = 1 minute
+        // Other options may go here depending on your toast library
+        id: 'transaction-loading'
+      }
+    );
+    
   };
 }

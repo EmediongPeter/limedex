@@ -81,7 +81,7 @@ const SwapDetails: React.FC<SwapDetailsProps> = ({
   swapRate,
   quoteResponse,
 }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [feeInUSD, setFeeInUSD] = useState<string>("$0.00");
 
   const calculateFees = useCallback(async () => {
@@ -121,7 +121,7 @@ const SwapDetails: React.FC<SwapDetailsProps> = ({
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium text-gray-900 dark:text-white">
-            Price
+            Details
           </span>
           <Tooltip text="Current exchange rate between tokens">
             <svg

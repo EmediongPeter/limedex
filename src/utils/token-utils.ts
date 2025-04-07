@@ -20,6 +20,8 @@ import { fetcher } from "./fetcher";
 import axios from "axios";
 import { VersionedTransaction } from "@solana/web3.js";
 import { useConnection } from "@solana/wallet-adapter-react";
+import { useNotificationToast } from "@/components/ui/ui-layout";
+import toast from "react-hot-toast";
 // import {  } from "@solana/web3.js";
 // async function executeSwapWithFee() {
 //   // 1. Initialize
@@ -148,7 +150,7 @@ async function ensureFeeAccountExists(
   feeAccountOwner: PublicKey,
   tokenProgram: PublicKey = TOKEN_PROGRAM_ID
 ): Promise<PublicKey> {
-  console.log({wallet, w: wallet.signTransaction})
+  console.log({ wallet, w: wallet.signTransaction });
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error("Wallet not connected");
   }
@@ -160,7 +162,7 @@ async function ensureFeeAccountExists(
     tokenProgram
   );
 
-  console.log({feeAccount})
+  console.log({ feeAccount });
 
   try {
     const _accInfo = await getAccount(
@@ -400,6 +402,7 @@ export const signAndExecuteSwap = async (
   connection: Connection,
   maxRetries = 3
 ) => {
+  // const notificationToast = useNotificationToast();
   if (!wallet.connected || !wallet.signTransaction || !wallet.publicKey) {
     throw new Error("Wallet not connected");
   }
@@ -434,7 +437,7 @@ export const signAndExecuteSwap = async (
         // onlyDirectRoutes: true,
         // asLegacyTransaction: true,
         // network: "devnet",
-        feeAccount
+        // feeAccount
 
         // Include other parameters
       });
@@ -453,14 +456,15 @@ export const signAndExecuteSwap = async (
       if (simulation.value.err) {
         console.error("Transaction simulation failed:", simulation.value.err);
         console.log({ v: simulation.value });
-        // return;
+        toast.error('')
+        return;
       }
 
       console.log("Simulation successful. Estimated fee:", simulation.value);
 
+      // notificationToast();
       // 3. Sign with fresh blockhash
       const signedTx = await wallet.signTransaction(swapTransaction);
-
       // 4. Send with skipPreflight=false for better reliability
       const txid = await connection.sendRawTransaction(signedTx.serialize(), {
         skipPreflight: false,
@@ -480,12 +484,17 @@ export const signAndExecuteSwap = async (
       );
 
       console.log({ result });
+
       if (result.value.err) {
         throw new Error(`Transaction failed: ${result.value.err}`);
+      } else {
+        // toast.remove("transaction-loading");
+        console.log('')
       }
 
       return txid; // Success case
     } catch (error) {
+      // toast.remove("transaction-loading");
       lastError = error;
       console.warn(`Attempt ${attempt} failed:`, error);
 

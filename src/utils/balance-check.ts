@@ -7,6 +7,8 @@ import {
 import {
   NATIVE_MINT,
 } from "@solana/spl-token";
+import { useCustomToasts } from "@/components/ui/Toast";
+import { useToaster } from "react-hot-toast";
 
 
 export function checkBalance(
@@ -21,12 +23,14 @@ export function checkBalance(
   decimals: number,
   baseToken: PublicKey | string
 ) {
+  const toast = useToaster();
+  const { showErrorToast } = useCustomToasts(toast);
   // const [result, setResult] = useState<BalanceCheckResult>({
   //   hasSufficientBalance: false,
   //   error: undefined,
   //   isLoading: false,
   // });
-  console.log(amount, solBalance, decimals, baseToken);
+  // console.log(amount, solBalance, decimals, baseToken);
   if (!amount || !solBalance || !decimals) return ;
 
   const isSolSwap = baseToken === NATIVE_MINT.toString();
@@ -40,6 +44,7 @@ export function checkBalance(
     //   error: "Insufficient SOL for gas fees",
     //   isLoading: false,
     // });
+    showErrorToast("Insufficient SOL for this swap");
     return false;
   }
 

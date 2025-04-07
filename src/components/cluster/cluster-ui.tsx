@@ -9,7 +9,7 @@ import { ClusterNetwork, useCluster } from './cluster-data-access'
 import { Connection } from '@solana/web3.js'
 
 export function ExplorerLink({ path, label, className }: { path: string; label: string; className?: string }) {
-  const { getExplorerUrl } = useCluster()
+  const { getExplorerUrl, } = useCluster()
   return (
     <a
       href={getExplorerUrl(path)}
