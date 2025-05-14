@@ -293,9 +293,11 @@ const SwapCard: React.FC = () => {
       
       console.log("Swap executed:", swapTxId);
     } catch (error: any) {
-      // Show error toast
-      showErrorToast(error.message || "Swap failed");
-      console.error("Swap execution failed:", error);
+        if (err.message.startsWith("SimulationError")) {
+        showErrorToast("Network overloaded—please try again shortly.");
+      } else {
+        showErrorToast(err.message || "Swap failed");
+      }
     } finally {
       setSwapState((prev) => ({ ...prev, loading: false }));
 
