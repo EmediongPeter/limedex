@@ -221,7 +221,7 @@ export const signAndExxecuteSwap = async (
 
   // 2. Your platform's fee account owner key
   const feeAccountOwner = new PublicKey(
-    "NHqbRfavqwZEqv8Q9bLCTZLtgCk49vsZJzqhnJkncVE"
+    "H57TwQHeaFxiKz1cGArtEkG6xTYvwXida7Mf358KSr8N"
   );
   const feeAccount = await ensureFeeAccountExists(
     connection,
@@ -417,7 +417,7 @@ export const signAndExecuteSwap = async (
       const latestBlockHash = await connection.getLatestBlockhash();
 
       const feeAccountOwner = new PublicKey(
-        "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3"
+        "H57TwQHeaFxiKz1cGArtEkG6xTYvwXida7Mf358KSr8N"
       );
       const feeAccount = await ensureFeeAccountExists(
         connection,
@@ -434,7 +434,7 @@ export const signAndExecuteSwap = async (
         // onlyDirectRoutes: true,
         // asLegacyTransaction: true,
         // network: "devnet",
-        // feeAccount
+        feeAccount: feeAccount.toString()
 
         // Include other parameters
       });
@@ -453,8 +453,7 @@ export const signAndExecuteSwap = async (
       if (simulation.value.err) {
         console.error("Transaction simulation failed:", simulation.value.err);
         console.log({ v: simulation.value });
-        toast.error('')
-        return;
+        throw new Error("SimulationError: network overloaded");
       }
 
       console.log("Simulation successful. Estimated fee:", simulation.value);
