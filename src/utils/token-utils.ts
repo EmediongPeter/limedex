@@ -437,7 +437,7 @@ export const signAndExecuteSwap = async (
         // onlyDirectRoutes: true,
         // asLegacyTransaction: true,
         // network: "devnet",
-        // feeAccount: feeAccount.toString()
+        feeAccount: feeAccount.toString()
 
         // Include other parameters
       });
