@@ -393,124 +393,6 @@ export const signAndExxecuteSwap = async (
     console.log({ errror: error.message });
   }
 };
-// export const signAndExecuteSwap = async (
-//   wallet: any,
-//   quoteResponse: any,
-//   connection: Connection,
-//   maxRetries = 3
-// ) => {
-//   // const notificationToast = useNotificationToast();
-//   if (!wallet.connected || !wallet.signTransaction || !wallet.publicKey) {
-//     throw new Error("Wallet not connected");
-//   }
-
-//   let attempt = 0;
-//   let lastError: Error | unknown | null = null;
-
-//   const outputMint = new PublicKey(quoteResponse.outputMint);
-//   const tokenProgram = TOKEN_PROGRAM_ID;
-
-//   while (attempt < maxRetries) {
-//     attempt++;
-//     try {
-//       // 1. Get fresh blockhash for each attempt
-//       const latestBlockHash = await connection.getLatestBlockhash();
-
-//       const feeAccountOwner = new PublicKey(
-//         "BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4"
-//       );
-//       const feeAccount = await ensureFeeAccountExists(
-//         connection,
-//         wallet, // Payer
-//         outputMint,
-//         feeAccountOwner,
-//         tokenProgram
-//       );
-//       // 2. Get fresh swap transaction (important for retries)
-//       const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
-//         quoteResponse,
-//         userPublicKey: wallet.publicKey.toString(),
-//         wrapAndUnwrapSol: true,
-//         // onlyDirectRoutes: true,
-//         // asLegacyTransaction: true,
-//         // network: "devnet",
-//         feeAccount: feeAccount.toString()
-
-//         // Include other parameters
-//       });
-
-//       const swapTransaction = VersionedTransaction.deserialize(
-//         Buffer.from(response.data.swapTransaction, "base64")
-//       );
-
-//       const simulation = await connection.simulateTransaction(swapTransaction, {
-//         commitment: "processed",
-//         replaceRecentBlockhash: true,
-//         sigVerify: false,
-//       });
-
-//       // Check if simulation was successful
-//       if (simulation.value.err) {
-//         console.error("Transaction simulation failed:", simulation.value.err);
-//         console.log({ v: simulation.value });
-//         throw new Error("SimulationError: network overloaded");
-//       }
-
-//       console.log("Simulation successful. Estimated fee:", simulation.value);
-
-//       // notificationToast();
-//       // 3. Sign with fresh blockhash
-//       const signedTx = await wallet.signTransaction(swapTransaction);
-//       // 4. Send with skipPreflight=false for better reliability
-//       const txid = await connection.sendRawTransaction(signedTx.serialize(), {
-//         skipPreflight: false,
-//         maxRetries: 2,
-//       });
-
-//       console.log({ txid });
-
-//       // 5. Enhanced confirmation with timeout
-//       const result = await connection.confirmTransaction(
-//         {
-//           signature: txid,
-//           blockhash: latestBlockHash.blockhash,
-//           lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-//         },
-//         "confirmed"
-//       );
-
-//       console.log({ result });
-
-//       if (result.value.err) {
-//         throw new Error(`Transaction failed: ${result.value.err}`);
-//       } else {
-//         // toast.remove("transaction-loading");
-//         console.log('')
-//       }
-
-//       return txid; // Success case
-//     } catch (error) {
-//       // toast.remove("transaction-loading");
-//       lastError = error;
-//       console.warn(`Attempt ${attempt} failed:`, error);
-
-//       // Specific handling for blockheight exceeded
-//       if (error instanceof TransactionExpiredBlockheightExceededError) {
-//         // Wait before retrying
-//         await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
-//         continue;
-//       }
-
-//       // For other errors, decide whether to retry
-//       if (shouldRetryError(error)) {
-//         continue;
-//       }
-//       break;
-//     }
-//   }
-
-//   throw lastError || new Error("Max retries exceeded");
-// };
 
 export const signAndExecuteSwap = async (
   wallet: any,
@@ -518,6 +400,7 @@ export const signAndExecuteSwap = async (
   connection: Connection,
   maxRetries = 3
 ) => {
+  // const notificationToast = useNotificationToast();
   if (!wallet.connected || !wallet.signTransaction || !wallet.publicKey) {
     throw new Error("Wallet not connected");
   }
@@ -525,77 +408,102 @@ export const signAndExecuteSwap = async (
   let attempt = 0;
   let lastError: Error | unknown | null = null;
 
-  // 1. Convert to legacy transaction first
-  const getTransaction = async () => {
-    try {
-      const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
-        quoteResponse,
-        userPublicKey: wallet.publicKey.toString(),
-        wrapAndUnwrapSol: true,
-        asLegacyTransaction: true, // Force legacy transactions
-        feeAccount: "BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4" // Remove if not needed for testing
-      });
-
-      // Handle both transaction types safely
-      const buffer = Buffer.from(response.data.swapTransaction, "base64");
-      try {
-        return Transaction.from(buffer);
-      } catch {
-        return VersionedTransaction.deserialize(buffer);
-      }
-    } catch (error) {
-      console.error("Transaction construction failed:", error);
-      throw error;
-    }
-  };
+  const outputMint = new PublicKey(quoteResponse.outputMint);
+  const tokenProgram = TOKEN_PROGRAM_ID;
 
   while (attempt < maxRetries) {
     attempt++;
     try {
-      // 2. Get fresh transaction for each attempt
-      const transaction = await getTransaction();
+      // 1. Get fresh blockhash for each attempt
       const latestBlockHash = await connection.getLatestBlockhash();
 
-      // 3. Update transaction with latest blockhash
-      if (transaction instanceof VersionedTransaction) {
-        transaction.message.recentBlockhash = latestBlockHash.blockhash;
-      } else {
-        transaction.recentBlockhash = latestBlockHash.blockhash;
+      const feeAccountOwner = new PublicKey(
+        "BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4"
+      );
+      const feeAccount = await ensureFeeAccountExists(
+        connection,
+        wallet, // Payer
+        outputMint,
+        feeAccountOwner,
+        tokenProgram
+      );
+      // 2. Get fresh swap transaction (important for retries)
+      const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
+        quoteResponse,
+        userPublicKey: wallet.publicKey.toString(),
+        wrapAndUnwrapSol: true,
+        // onlyDirectRoutes: true,
+        // asLegacyTransaction: true,
+        // network: "devnet",
+        // feeAccount: feeAccount.toString()
+
+        // Include other parameters
+      });
+
+      const swapTransaction = VersionedTransaction.deserialize(
+        Buffer.from(response.data.swapTransaction, "base64")
+      );
+
+      const simulation = await connection.simulateTransaction(swapTransaction, {
+        commitment: "processed",
+        replaceRecentBlockhash: true,
+        sigVerify: false,
+      });
+
+      // Check if simulation was successful
+      if (simulation.value.err) {
+        console.error("Transaction simulation failed:", simulation.value.err);
+        console.log({ v: simulation.value });
+        throw new Error("SimulationError: network overloaded");
       }
 
-      // 4. Enhanced signing process
-      const signedTx = await wallet.signTransaction(transaction)
-        .catch(err => {
-          throw new Error(`Signing failed: ${err.message}`);
-        });
+      console.log("Simulation successful. Estimated fee:", simulation.value);
 
-      // 5. Send with proper confirmation
-      const rawTransaction = signedTx.serialize();
-      const txid = await connection.sendRawTransaction(rawTransaction, {
+      // notificationToast();
+      // 3. Sign with fresh blockhash
+      const signedTx = await wallet.signTransaction(swapTransaction);
+      // 4. Send with skipPreflight=false for better reliability
+      const txid = await connection.sendRawTransaction(signedTx.serialize(), {
         skipPreflight: false,
         maxRetries: 2,
       });
 
-      // 6. Optimized confirmation
-      const confirmation = await connection.confirmTransaction({
-        signature: txid,
-        blockhash: latestBlockHash.blockhash,
-        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-      }, "confirmed");
+      console.log({ txid });
 
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+      // 5. Enhanced confirmation with timeout
+      const result = await connection.confirmTransaction(
+        {
+          signature: txid,
+          blockhash: latestBlockHash.blockhash,
+          lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        },
+        "confirmed"
+      );
+
+      console.log({ result });
+
+      if (result.value.err) {
+        throw new Error(`Transaction failed: ${result.value.err}`);
+      } else {
+        // toast.remove("transaction-loading");
+        console.log('')
       }
 
-      return txid;
+      return txid; // Success case
     } catch (error) {
+      // toast.remove("transaction-loading");
       lastError = error;
-      console.error(`Attempt ${attempt} failed:`, error);
+      console.warn(`Attempt ${attempt} failed:`, error);
 
-      // 7. Enhanced error handling
-      if (error.message.includes("Blockhash not found") || 
-          error.message.includes("signTransaction")) {
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+      // Specific handling for blockheight exceeded
+      if (error instanceof TransactionExpiredBlockheightExceededError) {
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+        continue;
+      }
+
+      // For other errors, decide whether to retry
+      if (shouldRetryError(error)) {
         continue;
       }
       break;
