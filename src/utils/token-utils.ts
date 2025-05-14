@@ -533,7 +533,7 @@ export const signAndExecuteSwap = async (
         userPublicKey: wallet.publicKey.toString(),
         wrapAndUnwrapSol: true,
         asLegacyTransaction: true, // Force legacy transactions
-        feeAccount: "YOUR_FEE_ACCOUNT" // Remove if not needed for testing
+        feeAccount: "BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4" // Remove if not needed for testing
       });
 
       // Handle both transaction types safely
