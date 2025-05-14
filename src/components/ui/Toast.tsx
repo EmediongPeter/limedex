@@ -66,7 +66,7 @@ export const ToastLoading = ({ message, onClose }: {message: string, onClose: ()
 // Usage examples
 export const useCustomToasts = (toast: any) => {
   const showSuccessToast = (signature:any) => {
-    toast.remove('transaction-loading');
+    toast.dismiss('transaction-loading');
     toast.custom(
       (t:any) => <ToastSuccess signature={signature} onClose={() => toast.remove(t.id)} />,
       {
@@ -77,7 +77,7 @@ export const useCustomToasts = (toast: any) => {
   };
 
   const showErrorToast = (message:string) => {
-    toast.remove('transaction-loading');
+    toast.dismiss('transaction-loading');
     toast.custom(
       (t: { id: any; }) => <ToastError message={message} onClose={() => toast.remove(t.id)} />,
       {
