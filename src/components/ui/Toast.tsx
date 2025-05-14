@@ -65,10 +65,22 @@ export const ToastLoading = ({ message, onClose }: {message: string, onClose: ()
 
 // Usage examples
 export const useCustomToasts = (toast: any) => {
-  const showSuccessToast = (signature:any) => {
-    toast.dismiss('transaction-loading');
+  const safeDismiss = (id: string) => {
+    try {
+      if (toast && typeof toast.dismiss === 'function') {
+        toast.dismiss(id);
+      } else {
+        console.warn('toast.dismiss is not a function', toast);
+      }
+    } catch (err) {
+      console.error('Error dismissing toast:', err);
+    }
+  };
+
+  const showSuccessToast = (signature: any) => {
+    safeDismiss('transaction-loading');
     toast.custom(
-      (t:any) => <ToastSuccess signature={signature} onClose={() => toast.remove(t.id)} />,
+      (t: any) => <ToastSuccess signature={signature} onClose={() => safeDismiss(t.id)} />,
       {
         duration: 10000,
         id: 'transaction-success',
@@ -76,10 +88,10 @@ export const useCustomToasts = (toast: any) => {
     );
   };
 
-  const showErrorToast = (message:string) => {
-    toast.dismiss('transaction-loading');
+  const showErrorToast = (message: string) => {
+    safeDismiss('transaction-loading');
     toast.custom(
-      (t: { id: any; }) => <ToastError message={message} onClose={() => toast.remove(t.id)} />,
+      (t: { id: any }) => <ToastError message={message} onClose={() => safeDismiss(t.id)} />,
       {
         duration: 10000,
         id: 'transaction-error',
@@ -89,7 +101,7 @@ export const useCustomToasts = (toast: any) => {
 
   const showLoadingToast = (message: string) => {
     toast.custom(
-      (t: { id: any; }) => <ToastLoading message={message} onClose={() => toast.remove(t.id)} />,
+      (t: { id: any }) => <ToastLoading message={message} onClose={() => safeDismiss(t.id)} />,
       {
         duration: 60000,
         id: 'transaction-loading',
@@ -100,6 +112,6 @@ export const useCustomToasts = (toast: any) => {
   return {
     showSuccessToast,
     showErrorToast,
-    showLoadingToast
+    showLoadingToast,
   };
 };
