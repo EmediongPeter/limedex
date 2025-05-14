@@ -417,7 +417,7 @@ export const signAndExecuteSwap = async (
       const latestBlockHash = await connection.getLatestBlockhash();
 
       const feeAccountOwner = new PublicKey(
-        "H57TwQHeaFxiKz1cGArtEkG6xTYvwXida7Mf358KSr8N"
+        "BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4"
       );
       const feeAccount = await ensureFeeAccountExists(
         connection,
