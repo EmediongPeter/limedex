@@ -162,8 +162,6 @@ async function ensureFeeAccountExists(
     tokenProgram
   );
 
-  console.log({ feeAccount });
-
   try {
     const _accInfo = await getAccount(
       connection,
@@ -171,7 +169,6 @@ async function ensureFeeAccountExists(
       undefined,
       tokenProgram
     );
-    console.log({ _accInfo });
     return feeAccount;
   } catch (error) {
     const createIx = createAssociatedTokenAccountInstruction(
@@ -224,7 +221,7 @@ export const signAndExxecuteSwap = async (
 
   // 2. Your platform's fee account owner key
   const feeAccountOwner = new PublicKey(
-    "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3"
+    "NHqbRfavqwZEqv8Q9bLCTZLtgCk49vsZJzqhnJkncVE"
   );
   const feeAccount = await ensureFeeAccountExists(
     connection,
@@ -243,7 +240,7 @@ export const signAndExxecuteSwap = async (
     userPublicKey: wallet?.publicKey.toString(),
     wrapAndUnwrapSol: true,
     platformFeeBps: 15,
-    // feeAccount: feeAccount.toString(),
+    feeAccount: feeAccount.toString(),
     // tokenProgram: tokenProgram.toString() // Your fee percentage (0.5%)
     // feeAccount: "GQqS2np5FTfzuzaG3fjJGjPie3GjDWz9UfibNEemnnC3",
     // tokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
