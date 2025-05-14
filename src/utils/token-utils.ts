@@ -428,7 +428,7 @@ export const signAndExecuteSwap = async (
         tokenProgram
       );
 
-      console.log({feeAccountOwner, feeAccount})
+      console.log({feeAccountOwner: feeAccountOwner.toString(), feeAccount:feeAccount.toString()})
       // 2. Get fresh swap transaction (important for retries)
       const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
         quoteResponse,
