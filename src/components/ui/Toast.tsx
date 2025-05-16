@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, AlertCircle, Loader, ExternalLink, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // Toast components for different states
 export const ToastSuccess = ({ signature, onClose }: {signature: string, onClose: () => void}) => (
@@ -63,55 +64,30 @@ export const ToastLoading = ({ message, onClose }: {message: string, onClose: ()
   </div>
 );
 
-// Usage examples
-export const useCustomToasts = (toast: any) => {
-  const safeDismiss = (id: string) => {
-    try {
-      if (toast && typeof toast.dismiss === 'function') {
-        toast.dismiss(id);
-      } else {
-        console.warn('toast.dismiss is not a function', toast);
-      }
-    } catch (err) {
-      console.error('Error dismissing toast:', err);
-    }
-  };
-
-  const showSuccessToast = (signature: any) => {
-    safeDismiss('transaction-loading');
+export const useCustomToasts = () => {
+  const showSuccessToast = (signature: string) => {
+    toast.remove('transaction-loading');
     toast.custom(
-      (t: any) => <ToastSuccess signature={signature} onClose={() => safeDismiss(t.id)} />,
-      {
-        duration: 10000,
-        id: 'transaction-success',
-      }
+      t => <ToastSuccess signature={signature} onClose={() => toast.remove(t.id)} />,
+      { id: 'transaction-success', duration: 10_000 }
     );
   };
 
   const showErrorToast = (message: string) => {
-    safeDismiss('transaction-loading');
+    toast.remove('transaction-loading');
     toast.custom(
-      (t: { id: any }) => <ToastError message={message} onClose={() => safeDismiss(t.id)} />,
-      {
-        duration: 10000,
-        id: 'transaction-error',
-      }
+      t => <ToastError message={message} onClose={() => toast.remove(t.id)} />,
+      { id: 'transaction-error', duration: 10_000 }
     );
   };
 
   const showLoadingToast = (message: string) => {
     toast.custom(
-      (t: { id: any }) => <ToastLoading message={message} onClose={() => safeDismiss(t.id)} />,
-      {
-        duration: 60000,
-        id: 'transaction-loading',
-      }
+      t => <ToastLoading message={message} onClose={() => toast.remove(t.id)} />,
+      { id: 'transaction-loading', duration: 60_000 }
     );
   };
 
-  return {
-    showSuccessToast,
-    showErrorToast,
-    showLoadingToast,
-  };
+  return { showSuccessToast, showErrorToast, showLoadingToast };
 };
+
