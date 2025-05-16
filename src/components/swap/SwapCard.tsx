@@ -54,7 +54,7 @@ const SwapCard: React.FC = () => {
   const transactionToast = useTransactionToast();
   const notificationToast = useNotificationToast();
   // const toast = useToaster();
-  const { showSuccessToast, showErrorToast, showLoadingToast } = useCustomToasts(toast);
+  const { showSuccessToast, showErrorToast, showLoadingToast } = useCustomToasts();
 
   // Consolidated state to reduce render triggers
   const [swapState, setSwapState] = useState({
