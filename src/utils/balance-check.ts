@@ -10,7 +10,6 @@ import {
 import { useCustomToasts } from "@/components/ui/Toast";
 import { useToaster } from "react-hot-toast";
 
-
 export function checkBalance(
   amount: string,
   solBalance: number | undefined,
@@ -22,63 +21,55 @@ export function checkBalance(
     | undefined[] = [],
   decimals: number,
   baseToken: PublicKey | string
-) {
-  const toast = useToaster();
-  const { showErrorToast } = useCustomToasts(toast);
-  // const [result, setResult] = useState<BalanceCheckResult>({
-  //   hasSufficientBalance: false,
-  //   error: undefined,
-  //   isLoading: false,
-  // });
-  // console.log(amount, solBalance, decimals, baseToken);
-  if (!amount || !solBalance || !decimals) return ;
-
-  const isSolSwap = baseToken === NATIVE_MINT.toString();
-  const MIN_SOL_FOR_GAS = 0.01 * LAMPORTS_PER_SOL;
-  const amountInBaseUnits = isNaN( parseFloat(amount)) ? 0 :  parseFloat(amount) * Math.pow(10, decimals);
-  // }, [amount, decimals]);
-
-  if (solBalance < MIN_SOL_FOR_GAS) {
-    // setResult({
-    //   hasSufficientBalance: false,
-    //   error: "Insufficient SOL for gas fees",
-    //   isLoading: false,
-    // });
-    showErrorToast("Insufficient SOL for this swap");
-    return false;
+): boolean | undefined {
+  // Safely check inputs - return undefined for indeterminate state
+  if (!amount || amount === "0" || !decimals) {
+    return undefined;
   }
 
-  if (isSolSwap) {
-    const sufficient = solBalance >= amountInBaseUnits;
-    // setResult({
-    //   hasSufficientBalance: sufficient,
-    //   error: sufficient ? undefined : "Insufficient SOL balance",
-    //   isLoading: false,
-    // });
-    return sufficient;
-  } else  {
+  if (solBalance === undefined || solBalance === null) {
+    return undefined;
+  }
+
+  try {
+    const isSolSwap = baseToken === NATIVE_MINT.toString();
+    const MIN_SOL_FOR_GAS = 0.01 * LAMPORTS_PER_SOL;
     
-  }
-
-  if (tokenAccounts) {
-    if (!tokenAccounts) {
-      console.error("Not found token");
+    // Safely parse amount
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount)) {
+      return undefined;
     }
+    
+    const amountInBaseUnits = parsedAmount * Math.pow(10, decimals);
+
+    // Check for SOL gas fees
+    if (solBalance < MIN_SOL_FOR_GAS) {
+      return false;
+    }
+
+    // If swapping SOL, check SOL balance
+    if (isSolSwap) {
+      return solBalance >= amountInBaseUnits;
+    } 
+    
+    // Otherwise, check token balance
+    if (!Array.isArray(tokenAccounts) || tokenAccounts.length === 0) {
+      return undefined;
+    }
+    
     const tokenAccount = tokenAccounts.find(
-      (account) => account?.account.data.parsed.info.mint === baseToken
+      (account) => account?.account?.data?.parsed?.info?.mint === baseToken
     );
 
-    const tokenBalance =
-      tokenAccount?.account.data.parsed.info.tokenAmount.amount;
-    const sufficient = parseFloat(tokenBalance) >= amountInBaseUnits;
+    if (!tokenAccount || !tokenAccount.account?.data?.parsed?.info?.tokenAmount?.amount) {
+      return undefined;
+    }
 
-    // setResult({
-    //   hasSufficientBalance: sufficient,
-    //   error: sufficient ? undefined : "Insufficient token balance",
-    //   isLoading: false,
-    // });
-    return sufficient
+    const tokenBalance = tokenAccount.account.data.parsed.info.tokenAmount.amount;
+    return parseFloat(tokenBalance) >= amountInBaseUnits;
+  } catch (error) {
+    console.error("Error in balance check:", error);
+    return undefined;
   }
-
-  // return true;
 }

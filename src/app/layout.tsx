@@ -10,6 +10,7 @@ const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-inter',
+  fallback: ['system-ui', 'Arial', 'sans-serif'],
 })
 
 export const metadata: Metadata = {
@@ -26,6 +27,21 @@ const links: { label: string; path: string }[] = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <style dangerouslySetInnerHTML={{ __html: `
+          @font-face {
+            font-family: 'Inter Fallback';
+            font-style: normal;
+            font-weight: 400;
+            src: local('Arial');
+            ascent-override: 90%;
+            descent-override: 22%;
+            line-gap-override: 0%;
+            size-adjust: 107%;
+          }
+        `}} />
+      </head>
       <body>
         <ReactQueryProvider>
           <ClusterProvider>

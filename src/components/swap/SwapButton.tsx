@@ -1,58 +1,10 @@
+'use client';
 import React from 'react';
 import Button from '../ui/Button';
 
-interface SwapButtonProps {
-  onClick: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-  walletConnected?: boolean;
-  hasSufficientBalance?: boolean | undefined;
-  balanceError?: string;
-}
-
-const SwapButton: React.FC<SwapButtonProps> = ({
-  onClick,
-  disabled = false,
-  loading = false,
-  walletConnected = false,
-  hasSufficientBalance,
-  balanceError,
-}) => {
-  console.log({hasSufficientBalance, loading, disabled})
-  const getButtonText = () => {
-    if (loading) return "Processing...";
-    if (!walletConnected) return "Connect Wallet";
-    if (hasSufficientBalance === false) return balanceError || "Insufficient Balance";
-    if (hasSufficientBalance === undefined) return "Enter amount"
-    return "Swap";
-  };
-  return (
-    <Button
-  variant="primary"
-  className={`
-    w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300
-    ${disabled ? 'opacity-60 cursor-not-allowed bg-opacity-80' : 'hover:bg-opacity-90'}
-  `}
-  onClick={onClick}
-  disabled={disabled}
-  // title={disabled ? "This action is currently unavailable" : ""}
->
-  {loading ? (
-    <span className="flex items-center justify-center">
-      <Spinner className="mr-2" />
-      {getButtonText()}
-    </span>
-  ) : (
-    getButtonText()
-  )}
-</Button>
-  );
-};
-
-// Small spinner component for loading state
-const Spinner: React.FC<{ className?: string }> = ({ className }) => (
+const Spinner = ({ className = "" }) => (
   <svg
-    className={`animate-spin h-5 w-5 text-white ${className || ''}`}
+    className={`animate-spin h-5 w-5 text-white ${className}`}
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -72,5 +24,55 @@ const Spinner: React.FC<{ className?: string }> = ({ className }) => (
     ></path>
   </svg>
 );
+
+interface SwapButtonProps {
+  onClick: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  walletConnected?: boolean;
+  hasSufficientBalance?: boolean | undefined;
+  balanceError?: string;
+}
+
+const SwapButton: React.FC<SwapButtonProps> = ({
+  onClick,
+  disabled = false,
+  loading = false,
+  walletConnected = false,
+  hasSufficientBalance,
+  balanceError,
+}) => {
+  // Safely handle the console log and avoid null/undefined errors
+  const safeBalance = hasSufficientBalance === undefined ? undefined : !!hasSufficientBalance;
+  
+  const getButtonText = () => {
+    if (loading) return "Processing...";
+    if (!walletConnected) return "Connect Wallet";
+    if (hasSufficientBalance === false) return balanceError || "Insufficient Balance";
+    if (hasSufficientBalance === undefined) return "Enter amount"
+    return "Swap";
+  };
+  
+  return (
+    <Button
+      variant="primary"
+      className={`
+        w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300
+        ${disabled ? 'opacity-60 cursor-not-allowed bg-opacity-80' : 'hover:bg-opacity-90'}
+      `}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {loading ? (
+        <span className="flex items-center justify-center">
+          <Spinner className="mr-2" />
+          {getButtonText()}
+        </span>
+      ) : (
+        getButtonText()
+      )}
+    </Button>
+  );
+};
 
 export default SwapButton;

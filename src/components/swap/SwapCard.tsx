@@ -46,7 +46,20 @@ enum ActiveInput {
   TO = "to",
 }
 
+// Add a polyfill check for BigInt to ensure compatibility with older browsers
+const ensureBigIntSupport = () => {
+  if (typeof window !== 'undefined' && typeof window.BigInt === 'undefined') {
+    console.warn('BigInt not supported in this browser. Using fallback.');
+    // The native module will already use pure JS as a fallback
+  }
+};
+
 const SwapCard: React.FC = () => {
+  // Check for BigInt support on component mount
+  useEffect(() => {
+    ensureBigIntSupport();
+  }, []);
+  
   const wallet = useWallet();
   const { connection } = useConnection();
   const solBalance = useGetBalance({ address: wallet.publicKey });
@@ -331,16 +344,28 @@ const SwapCard: React.FC = () => {
     }));
   }, []);
 
-  // Check wallet connection before balance check
-  const isWalletConnected = !!wallet.publicKey;
+  // Handle token data safely
+  const safeTokenAccounts = useMemo(() => {
+    return Array.isArray(tokenAccounts.data) ? tokenAccounts.data : [];
+  }, [tokenAccounts.data]);
 
-  const hasSufficientBalance = checkBalance(
-    swapState.amount,
-    solBalance.data,
-    tokenAccounts.data,
-    swapState.fromToken.decimals,
-    swapState.fromToken.address
-  );
+  // Safely check balance
+  const checkBalanceSafely = useCallback(() => {
+    try {
+      return checkBalance(
+        swapState.amount,
+        solBalance.data,
+        safeTokenAccounts,
+        swapState.fromToken.decimals,
+        swapState.fromToken.address
+      );
+    } catch (error) {
+      console.error('Error checking balance:', error);
+      return false;
+    }
+  }, [swapState.amount, solBalance.data, safeTokenAccounts, swapState.fromToken]);
+
+  const hasSufficientBalance = checkBalanceSafely();
 
   // Cleanup on unmount
   useEffect(() => {
