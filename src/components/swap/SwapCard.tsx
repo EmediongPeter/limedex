@@ -500,38 +500,102 @@ const SwapCard: React.FC = () => {
     }
   }, [swapState, wallet, connection]);
 
+  // Fetch new quote when tokens or amount changes
+  useEffect(() => {
+    if (!swapState.amount || parseFloat(swapState.amount) <= 0) return;
+    
+    // Clear any existing timeout
+    if (swapState.fetchTimerId) {
+      clearTimeout(swapState.fetchTimerId);
+    }
+
+    const timerId = setTimeout(async () => {
+      try {
+        setSwapState(prev => ({ ...prev, loading: true }));
+        
+        const result = await fetchQuote(
+          swapState.fromToken,
+          swapState.toToken,
+          swapState.amount,
+          swapState.activeInput === ActiveInput.FROM
+        );
+
+        if (result) {
+          const amountKey = result.isFromInput ? 'outAmount' : 'inAmount';
+          const decimals = result.isFromInput ? result.toToken.decimals : result.fromToken.decimals;
+          
+          const humanReadableAmount = convertAmount(
+            result.quote[amountKey],
+            decimals,
+            ConvertType.HUMAN
+          );
+
+          setSwapState(prev => ({
+            ...prev,
+            swapRate: result.isFromInput ? humanReadableAmount : prev.swapRate,
+            amount: !result.isFromInput ? humanReadableAmount : prev.amount,
+            quoteResponse: result.quote,
+            loading: false
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching new quote:', error);
+        setSwapState(prev => ({
+          ...prev,
+          loading: false,
+          quoteResponse: undefined,
+          swapRate: null
+        }));
+      }
+    }, 300);
+
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [swapState.fromToken?.address, swapState.toToken?.address, slippage]);
+
   // Token selector handlers
   const handleFromTokenSelect = useCallback((token: TokenInfo) => {
+    // Don't do anything if selecting the same token
+    if (token.address === swapState.fromToken?.address) return;
+    
     const tokenWithIcon = {
       ...token,
-      icon: token.icon || "", // Provide a default empty string if undefined
+      icon: token.icon || "",
     };
     
     setContextFromToken(tokenWithIcon);
     setSwapState((prev) => ({
       ...prev,
       fromToken: tokenWithIcon,
-      amount: "",
-      swapRate: null,
-      quoteResponse: undefined,
+      // Only clear the quote if we have an amount entered
+      ...(prev.amount ? {
+        swapRate: null,
+        quoteResponse: undefined,
+      } : {})
     }));
-  }, [setContextFromToken]);
+  }, [setContextFromToken, swapState.fromToken?.address, swapState.amount]);
 
   const handleToTokenSelect = useCallback((token: TokenInfo) => {
+    // Don't do anything if selecting the same token
+    if (token.address === swapState.toToken?.address) return;
+    
     const tokenWithIcon = {
       ...token,
-      icon: token.icon || "", // Provide a default empty string if undefined
+      icon: token.icon || "",
     };
     
     setContextToToken(tokenWithIcon);
     setSwapState((prev) => ({
       ...prev,
       toToken: tokenWithIcon,
-      amount: "",
-      swapRate: null,
-      quoteResponse: undefined,
+      // Only clear the quote if we have an amount entered
+      ...(prev.amount ? {
+        swapRate: null,
+        quoteResponse: undefined,
+      } : {})
     }));
-  }, [setContextToToken]);
+  }, [setContextToToken, swapState.toToken?.address, swapState.amount]);
 
   // Handle token data safely
   const safeTokenAccounts = useMemo(() => {
