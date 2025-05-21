@@ -16,6 +16,9 @@ import SwapButton from "./SwapButton";
 import { useNotificationToast, useTransactionToast } from "../ui/ui-layout";
 import toast, { useToaster } from "react-hot-toast";
 import { useCustomToasts } from "../ui/Toast";
+import { useSwapContext } from "@/contexts/ContextProvider";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { NATIVE_MINT } from "@solana/spl-token";
 
 const DEFAULT_TOKENS = {
   SOL: {
@@ -69,6 +72,21 @@ const SwapCard: React.FC = () => {
   // const toast = useToaster();
   const { showSuccessToast, showErrorToast, showLoadingToast } = useCustomToasts();
 
+  // Use the swap context
+  const { 
+    fromTokenBalance, 
+    fromTokenBalanceUsd, 
+    fromTokenDecimals,
+    setHalfAmount, 
+    setMaxAmount,
+    fromToken: contextFromToken,
+    toToken: contextToToken,
+    amount: contextAmount,
+    setAmount: setContextAmount,
+    setFromToken: setContextFromToken,
+    setToToken: setContextToToken
+  } = useSwapContext();
+
   // Consolidated state to reduce render triggers
   const [swapState, setSwapState] = useState({
     fromToken: DEFAULT_TOKENS.SOL,
@@ -80,6 +98,25 @@ const SwapCard: React.FC = () => {
     activeInput: ActiveInput.FROM,
     fetchTimerId: null as NodeJS.Timeout | null,
   });
+
+  // Sync the local state with the context
+  useEffect(() => {
+    if (contextFromToken) {
+      setSwapState(prev => ({...prev, fromToken: contextFromToken}));
+    } else {
+      setContextFromToken(DEFAULT_TOKENS.SOL);
+    }
+    
+    if (contextToToken) {
+      setSwapState(prev => ({...prev, toToken: contextToToken}));
+    } else {
+      setContextToToken(DEFAULT_TOKENS.USDC);
+    }
+    
+    if (contextAmount !== swapState.amount) {
+      setSwapState(prev => ({...prev, amount: contextAmount}));
+    }
+  }, [contextFromToken, contextToToken, contextAmount]);
 
   // Convert amount helper - memoized to prevent recreations
   const convertAmount = useCallback(
@@ -163,6 +200,9 @@ const SwapCard: React.FC = () => {
     (value: string) => {
       const validValue = validateInput(value) || "";
 
+      // Update both context and local state
+      setContextAmount(validValue);
+      
       // Update the input immediately for responsiveness
       setSwapState((prev) => ({
         ...prev,
@@ -263,6 +303,120 @@ const SwapCard: React.FC = () => {
     [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]
   );
 
+  // Enhanced half/max functions that also trigger API calls
+  const handleHalfAmount = useCallback(() => {
+    if (fromTokenBalance && parseFloat(fromTokenBalance) > 0) {
+      const halfBalance = (parseFloat(fromTokenBalance) / 2).toString();
+      // Call original setHalfAmount from context
+      setHalfAmount();
+      
+      // Update both context and local state
+      setContextAmount(halfBalance);
+      
+      // Update the input immediately for responsiveness
+      setSwapState((prev) => ({
+        ...prev,
+        amount: halfBalance,
+        activeInput: ActiveInput.FROM,
+        // Clear existing timeout if any
+        fetchTimerId: prev.fetchTimerId
+          ? (() => {
+              clearTimeout(prev.fetchTimerId!);
+              return null;
+            })()
+          : null,
+      }));
+      
+      // Set up new debounced API call
+      const timerId = setTimeout(async () => {
+        const result = await fetchQuote(
+          swapState.fromToken,
+          swapState.toToken,
+          halfBalance,
+          true
+        );
+
+        if (result) {
+          const humanReadableOutAmount = convertAmount(
+            result.quote.outAmount,
+            result.toToken.decimals,
+            ConvertType.HUMAN
+          );
+
+          setSwapState((prev) => ({
+            ...prev,
+            swapRate: humanReadableOutAmount,
+            quoteResponse: result.quote,
+          }));
+        }
+      }, 500);
+
+      // Update the timer ID in state
+      setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
+    }
+  }, [fromTokenBalance, setHalfAmount, setContextAmount, fetchQuote, swapState.fromToken, swapState.toToken, convertAmount]);
+
+  // Enhanced max amount function that also triggers API calls
+  const handleMaxAmount = useCallback(() => {
+    if (fromTokenBalance && parseFloat(fromTokenBalance) > 0) {
+      let maxAmount: string;
+      
+      // If it's SOL, leave a small amount for gas fees
+      if (fromToken?.address === NATIVE_MINT.toString()) {
+        maxAmount = Math.max(parseFloat(fromTokenBalance) - 0.01, 0).toString();
+      } else {
+        maxAmount = fromTokenBalance;
+      }
+      
+      // Call original setMaxAmount from context
+      setMaxAmount();
+      
+      // Update both context and local state
+      setContextAmount(maxAmount);
+      
+      // Update the input immediately for responsiveness
+      setSwapState((prev) => ({
+        ...prev,
+        amount: maxAmount,
+        activeInput: ActiveInput.FROM,
+        // Clear existing timeout if any
+        fetchTimerId: prev.fetchTimerId
+          ? (() => {
+              clearTimeout(prev.fetchTimerId!);
+              return null;
+            })()
+          : null,
+      }));
+      
+      // Set up new debounced API call
+      const timerId = setTimeout(async () => {
+        const result = await fetchQuote(
+          swapState.fromToken,
+          swapState.toToken,
+          maxAmount,
+          true
+        );
+
+        if (result) {
+          const humanReadableOutAmount = convertAmount(
+            result.quote.outAmount,
+            result.toToken.decimals,
+            ConvertType.HUMAN
+          );
+
+          setSwapState((prev) => ({
+            ...prev,
+            swapRate: humanReadableOutAmount,
+            quoteResponse: result.quote,
+          }));
+        }
+      }, 500);
+
+      // Update the timer ID in state
+      setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
+    }
+  }, [fromTokenBalance, setMaxAmount, setContextAmount, fetchQuote, swapState.fromToken, swapState.toToken, convertAmount]);
+
   // Swap tokens handler
   const handleSwapTokens = useCallback(() => {
     setSwapState((prev) => {
@@ -319,30 +473,36 @@ const SwapCard: React.FC = () => {
 
   // Token selector handlers
   const handleFromTokenSelect = useCallback((token: TokenInfo) => {
+    const tokenWithIcon = {
+      ...token,
+      icon: token.icon || "", // Provide a default empty string if undefined
+    };
+    
+    setContextFromToken(tokenWithIcon);
     setSwapState((prev) => ({
       ...prev,
-      fromToken: {
-        ...token,
-        icon: token.icon || "", // Provide a default empty string if undefined
-      },
+      fromToken: tokenWithIcon,
       amount: "",
       swapRate: null,
       quoteResponse: undefined,
     }));
-  }, []);
+  }, [setContextFromToken]);
 
   const handleToTokenSelect = useCallback((token: TokenInfo) => {
+    const tokenWithIcon = {
+      ...token,
+      icon: token.icon || "", // Provide a default empty string if undefined
+    };
+    
+    setContextToToken(tokenWithIcon);
     setSwapState((prev) => ({
       ...prev,
-      toToken: {
-        ...token,
-        icon: token.icon || "", // Provide a default empty string if undefined
-      },
+      toToken: tokenWithIcon,
       amount: "",
       swapRate: null,
       quoteResponse: undefined,
     }));
-  }, []);
+  }, [setContextToToken]);
 
   // Handle token data safely
   const safeTokenAccounts = useMemo(() => {
@@ -396,6 +556,16 @@ const SwapCard: React.FC = () => {
           <span className="text-sm text-gray-500 dark:text-gray-400">
             You Pay
           </span>
+          {wallet.connected && fromToken && (
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <span>Balance: {fromTokenBalance}</span>
+              {fromTokenBalanceUsd && (
+                <span className="ml-1 text-gray-400 dark:text-gray-500">
+                  (${fromTokenBalanceUsd})
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <input
           type="text"
@@ -404,10 +574,28 @@ const SwapCard: React.FC = () => {
           value={amount}
           onChange={(e) => handleFromAmountChange(e.target.value)}
         />
+        {/* Token balance selection options */}
+        {wallet.connected && parseFloat(fromTokenBalance) > 0 && (
+          <div className="flex mt-2 mb-3 gap-2">
+            <button
+              onClick={handleHalfAmount}
+              className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+            >
+              HALF
+            </button>
+            <button
+              onClick={handleMaxAmount}
+              className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+            >
+              MAX
+            </button>
+          </div>
+        )}
         <div className="flex justify-end">
           <TokenSelector
             onSelect={handleFromTokenSelect}
             currentToken={fromToken}
+            isInputToken={true}
           />
         </div>
       </div>

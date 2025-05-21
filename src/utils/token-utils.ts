@@ -15,7 +15,7 @@ import {
   Transaction,
   TransactionExpiredBlockheightExceededError,
 } from "@solana/web3.js";
-import { useWallet, WalletContextState } from "@solana/wallet-adapter-react";
+import { WalletContextState } from "@solana/wallet-adapter-react";
 import { fetcher } from "./fetcher";
 import axios from "axios";
 import { VersionedTransaction } from "@solana/web3.js";

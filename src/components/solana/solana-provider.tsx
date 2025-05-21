@@ -22,9 +22,7 @@ import {
   TokenPocketWalletAdapter,
   WalletConnectWalletAdapter,
   SkyWalletAdapter,
-  LedgerWalletAdapter,
-  
-
+  LedgerWalletAdapter
 } from "@solana/wallet-adapter-wallets";
 
 // import {
@@ -53,6 +51,13 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
+      new BitgetWalletAdapter(),
+      new Coin98WalletAdapter(),
+      new MathWalletAdapter(),
+      new TokenPocketWalletAdapter(),
+      // new WalletConnectWalletAdapter(),
+      new SkyWalletAdapter(),
+      new LedgerWalletAdapter()
     ],
     [cluster]
   );
