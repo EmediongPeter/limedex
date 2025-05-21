@@ -4,6 +4,7 @@ import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { QuoteResponse, TokenInfo } from "@/types/token-info";
 import TransactionHistory from "./TransactionHistory";
+import SlippageSettings from "./SlippageSettings";
 import { fetchSwapQuote, signAndExecuteSwap } from "@/utils/token-utils";
 import { validateInput } from "@/utils/valid-input";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -18,6 +19,7 @@ import { useNotificationToast, useTransactionToast } from "../ui/ui-layout";
 import toast, { useToaster } from "react-hot-toast";
 import { useCustomToasts } from "../ui/Toast";
 import { useSwapContext } from "@/contexts/ContextProvider";
+import { useSettings } from "@/contexts/SettingsContext";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 
@@ -71,6 +73,7 @@ const SwapCard: React.FC = () => {
   
   const wallet = useWallet();
   const { connection } = useConnection();
+  const { slippage } = useSettings();
   const solBalance = useGetBalance({ address: wallet.publicKey });
   const tokenAccounts = useGetTokenAccounts({ address: wallet.publicKey });
   const transactionToast = useTransactionToast();
@@ -176,49 +179,38 @@ const SwapCard: React.FC = () => {
         parseFloat(inputAmount) <= 0
       )
         return null;
+      
       try {
         setSwapState((prev) => ({ ...prev, loading: true }));
 
-        let sourceToken, destinationToken, amount;
-
-        if (isFromInput) {
-          sourceToken = fromToken.address;
-          destinationToken = toToken.address;
-          amount = convertAmount(
-            inputAmount,
-            fromToken.decimals,
-            ConvertType.DECIMAL
-          );
-        } else {
-          sourceToken = toToken.address;
-          destinationToken = fromToken.address;
-          amount = convertAmount(
-            inputAmount,
-            toToken.decimals,
-            ConvertType.DECIMAL
-          );
-        }
-
-        const quote = await fetchSwapQuote(
-          sourceToken,
-          destinationToken,
-          amount
+        // Convert amount to lamports/atoms based on token decimals
+        const amountInLamports = Math.floor(
+          parseFloat(inputAmount) * Math.pow(10, fromToken.decimals)
         );
 
+        const response = await fetchSwapQuote(
+          fromToken.address,
+          toToken.address,
+          amountInLamports.toString(),
+          slippage // Pass slippage in basis points (e.g., 50 for 0.5%)
+        );
+
+        if (!response) return null;
+
         return {
-          quote,
-          isFromInput,
+          quote: response,
           fromToken,
           toToken,
+          isFromInput,
         };
       } catch (error) {
-        console.error("Failed to fetch swap quote:", error);
+        console.error("Error fetching quote:", error);
         return null;
       } finally {
-        setSwapState((prev) => ({ ...prev, loading: false }));
+        setSwapState(prev => ({ ...prev, loading: false }));
       }
     },
-    [convertAmount]
+    [slippage]
   );
 
   // Handler for from amount changes with proper debouncing
@@ -335,31 +327,44 @@ const SwapCard: React.FC = () => {
   );
 
   // Format amount to 5 decimal places
-  const formatToFiveDecimals = (value: string): string => {
+  const formatToFiveDecimals = useCallback((value: string): string => {
     const num = parseFloat(value);
     if (isNaN(num)) return value;
     // Ensure we don't have more than 5 decimal places
     const fixed = num.toFixed(5);
     // Remove trailing zeros and . if not needed
     return parseFloat(fixed).toString();
-  };
+  }, []);
 
   // Helper function to update amount and fetch quote
   const updateAmountAndFetchQuote = useCallback(async (amount: string) => {
     // Update the input immediately for responsiveness
-    setSwapState(prev => ({
-      ...prev,
-      amount,
-      activeInput: ActiveInput.FROM,
+    setSwapState(prev => {
       // Clear existing timeout if any
-      fetchTimerId: prev.fetchTimerId
-        ? (() => {
-            clearTimeout(prev.fetchTimerId!);
-            return null;
-          })()
-        : null,
-    }));
-    
+      const newState = {
+        ...prev,
+        amount,
+        activeInput: ActiveInput.FROM,
+        fetchTimerId: null as NodeJS.Timeout | null
+      };
+      
+      if (prev.fetchTimerId) {
+        clearTimeout(prev.fetchTimerId);
+      }
+      
+      return newState;
+    });
+
+    // Only proceed with API call if we have a valid amount
+    if (!amount || parseFloat(amount) <= 0) {
+      setSwapState(prev => ({
+        ...prev,
+        swapRate: null,
+        quoteResponse: undefined,
+      }));
+      return;
+    }
+
     // Set up new debounced API call
     const timerId = setTimeout(async () => {
       const result = await fetchQuote(
@@ -385,7 +390,10 @@ const SwapCard: React.FC = () => {
     }, 500);
 
     // Update the timer ID in state
-    setSwapState(prev => ({ ...prev, fetchTimerId: timerId }));
+    setSwapState(prev => ({
+      ...prev,
+      fetchTimerId: timerId
+    }));
   }, [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]);
 
   // Handler for max amount - sets the input to the maximum available balance
@@ -565,6 +573,12 @@ const SwapCard: React.FC = () => {
       {/* 3. Jupiter swap API IMPLEMENTATION */}
 
       <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 mb-3 border border-gray-200 dark:border-slate-700 mt-1">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Swap
+          </h2>
+          <SlippageSettings />
+        </div>
         <div className="flex justify-between mb-2">
           <span className="text-sm text-gray-500 dark:text-gray-400">
             You Pay

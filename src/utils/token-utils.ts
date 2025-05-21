@@ -76,15 +76,22 @@ export const fetchTokenPrice = async (mintAddress: string) => {
 export const fetchSwapQuote = async (
   inputMint: string,
   outputMint: string,
-  amount: string
+  amount: string,
+  slippageBps: number = 50 // Default to 0.5% slippage if not provided
 ) => {
   try {
+    const params = new URLSearchParams({
+      inputMint,
+      outputMint,
+      amount,
+      restrictIntermediateTokens: 'true',
+      platformFeeBps: '15',
+      onlyDirectRoutes: 'true',
+      slippageBps: slippageBps.toString()
+    });
+
     const swapRoutes = await fetch(
-      `https://api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&restrictIntermediateTokens=true&platformFeeBps=${Number(
-        15
-      )}&onlyDirectRoutes=true`
-      // `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50&restrictIntermediateTokens=true&platformFeeBps=${Number(10)}&feeAccount=BgofVtUQk5WfWq2iHS8RHDvWs9BYcNEWrrxxvPBFUft4&onlyDirectRoutes=${true}`,
-      // `https://ultra-api.jup.ag/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}`
+      `https://api.jup.ag/swap/v1/quote?${params.toString()}`
     );
 
     // const quoteResponse = await axios.get('https://quote-api.jup.ag/v6/quote', {

@@ -4,6 +4,7 @@ import { SolanaProvider } from '@/components/solana/solana-provider'
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { SwapProvider } from '@/contexts/ContextProvider'
+import { SettingsProvider } from '@/contexts/SettingsContext'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 
@@ -48,7 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ClusterProvider>
             <SolanaProvider>
               <SwapProvider>
-                <UiLayout links={links}>{children}</UiLayout>
+                <SettingsProvider>
+                  <UiLayout links={links}>{children}</UiLayout>
+                </SettingsProvider>
               </SwapProvider>
             </SolanaProvider>
           </ClusterProvider>
