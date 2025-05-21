@@ -436,11 +436,13 @@ const SwapCard: React.FC = () => {
   // Swap tokens handler
   const handleSwapTokens = useCallback(() => {
     setSwapState((prev) => {
-      // Swap tokens
+      if (!prev.fromToken || !prev.toToken) return prev;
+
+      // Get current tokens
       const newFromToken = prev.toToken;
       const newToToken = prev.fromToken;
 
-      // Swap amounts
+      // Get current amounts
       const newAmount = prev.swapRate || "";
       const newSwapRate = prev.amount || "";
 
@@ -454,9 +456,20 @@ const SwapCard: React.FC = () => {
         // Reset loading state and quote
         loading: false,
         quoteResponse: undefined,
+        // Clear any existing timeout
+        fetchTimerId: prev.fetchTimerId
+          ? (() => {
+              clearTimeout(prev.fetchTimerId!);
+              return null;
+            })()
+          : null,
       };
     });
-  }, []);
+
+    // Also update the context to reflect the token swap
+    setContextFromToken(swapState.toToken);
+    setContextToToken(swapState.fromToken);
+  }, [swapState.fromToken, swapState.toToken, setContextFromToken, setContextToToken]);
 
   // Handle swap execution
   const handleSwap = useCallback(async () => {
@@ -634,7 +647,7 @@ const SwapCard: React.FC = () => {
       </div>
 
       {/* Swap arrow */}
-      <div className="flex justify-center my-1 absolute z-10 right-0 left-0 top-80">
+      <div className="flex justify-center my-1">
         <button
           onClick={handleSwapTokens}
           className="w-10 h-10 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center cursor-pointer border-4 border-white dark:border-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors duration-200"
