@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { QuoteResponse, TokenInfo } from "@/types/token-info";
+import TransactionHistory from "./TransactionHistory";
 import { fetchSwapQuote, signAndExecuteSwap } from "@/utils/token-utils";
 import { validateInput } from "@/utils/valid-input";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -17,7 +18,7 @@ import { useNotificationToast, useTransactionToast } from "../ui/ui-layout";
 import toast, { useToaster } from "react-hot-toast";
 import { useCustomToasts } from "../ui/Toast";
 import { useSwapContext } from "@/contexts/ContextProvider";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 // Define a stricter type for our default tokens that includes the icon
@@ -319,128 +320,110 @@ const SwapCard: React.FC = () => {
             ConvertType.HUMAN
           );
 
-          setSwapState((prev) => ({ ...prev, amount: humanReadableInAmount }));
+          setSwapState((prev) => ({ 
+            ...prev, 
+            amount: humanReadableInAmount,
+            quoteResponse: result.quote 
+          }));
         }
       }, 500);
 
+      // Update the timer ID in state
       setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
     },
     [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]
   );
 
-  // Enhanced half/max functions that also trigger API calls
-  const handleHalfAmount = useCallback(() => {
-    if (fromTokenBalance && parseFloat(fromTokenBalance) > 0) {
-      const halfBalance = (parseFloat(fromTokenBalance) / 2).toString();
-      // Call original setHalfAmount from context
-      setHalfAmount();
-      
-      // Update both context and local state
-      setContextAmount(halfBalance);
-      
-      // Update the input immediately for responsiveness
-      setSwapState((prev) => ({
-        ...prev,
-        amount: halfBalance,
-        activeInput: ActiveInput.FROM,
-        // Clear existing timeout if any
-        fetchTimerId: prev.fetchTimerId
-          ? (() => {
-              clearTimeout(prev.fetchTimerId!);
-              return null;
-            })()
-          : null,
-      }));
-      
-      // Set up new debounced API call
-      const timerId = setTimeout(async () => {
-        const result = await fetchQuote(
-          swapState.fromToken,
-          swapState.toToken,
-          halfBalance,
-          true
+  // Format amount to 5 decimal places
+  const formatToFiveDecimals = (value: string): string => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+    // Ensure we don't have more than 5 decimal places
+    const fixed = num.toFixed(5);
+    // Remove trailing zeros and . if not needed
+    return parseFloat(fixed).toString();
+  };
+
+  // Helper function to update amount and fetch quote
+  const updateAmountAndFetchQuote = useCallback(async (amount: string) => {
+    // Update the input immediately for responsiveness
+    setSwapState(prev => ({
+      ...prev,
+      amount,
+      activeInput: ActiveInput.FROM,
+      // Clear existing timeout if any
+      fetchTimerId: prev.fetchTimerId
+        ? (() => {
+            clearTimeout(prev.fetchTimerId!);
+            return null;
+          })()
+        : null,
+    }));
+    
+    // Set up new debounced API call
+    const timerId = setTimeout(async () => {
+      const result = await fetchQuote(
+        swapState.fromToken,
+        swapState.toToken,
+        amount,
+        true
+      );
+
+      if (result) {
+        const humanReadableOutAmount = convertAmount(
+          result.quote.outAmount,
+          result.toToken.decimals,
+          ConvertType.HUMAN
         );
 
-        if (result) {
-          const humanReadableOutAmount = convertAmount(
-            result.quote.outAmount,
-            result.toToken.decimals,
-            ConvertType.HUMAN
-          );
+        setSwapState(prev => ({
+          ...prev,
+          swapRate: humanReadableOutAmount,
+          quoteResponse: result.quote,
+        }));
+      }
+    }, 500);
 
-          setSwapState((prev) => ({
-            ...prev,
-            swapRate: humanReadableOutAmount,
-            quoteResponse: result.quote,
-          }));
-        }
-      }, 500);
+    // Update the timer ID in state
+    setSwapState(prev => ({ ...prev, fetchTimerId: timerId }));
+  }, [swapState.fromToken, swapState.toToken, fetchQuote, convertAmount]);
 
-      // Update the timer ID in state
-      setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
-    }
-  }, [fromTokenBalance, setHalfAmount, setContextAmount, fetchQuote, swapState.fromToken, swapState.toToken, convertAmount]);
-
-  // Enhanced max amount function that also triggers API calls
+  // Handler for max amount - sets the input to the maximum available balance
   const handleMaxAmount = useCallback(() => {
     if (fromTokenBalance && parseFloat(fromTokenBalance) > 0) {
       let maxAmount: string;
       
       // If it's SOL, leave a small amount for gas fees
-      if (fromToken?.address === NATIVE_MINT.toString()) {
+      if (swapState.fromToken?.address === NATIVE_MINT.toString()) {
         maxAmount = Math.max(parseFloat(fromTokenBalance) - 0.01, 0).toString();
       } else {
         maxAmount = fromTokenBalance;
       }
       
-      // Call original setMaxAmount from context
-      setMaxAmount();
+      // Format the max amount to 5 decimal places
+      const formattedMaxAmount = formatToFiveDecimals(maxAmount);
       
-      // Update both context and local state
-      setContextAmount(maxAmount);
+      // Update the context and local state
+      setContextAmount(formattedMaxAmount);
       
-      // Update the input immediately for responsiveness
-      setSwapState((prev) => ({
-        ...prev,
-        amount: maxAmount,
-        activeInput: ActiveInput.FROM,
-        // Clear existing timeout if any
-        fetchTimerId: prev.fetchTimerId
-          ? (() => {
-              clearTimeout(prev.fetchTimerId!);
-              return null;
-            })()
-          : null,
-      }));
-      
-      // Set up new debounced API call
-      const timerId = setTimeout(async () => {
-        const result = await fetchQuote(
-          swapState.fromToken,
-          swapState.toToken,
-          maxAmount,
-          true
-        );
-
-        if (result) {
-          const humanReadableOutAmount = convertAmount(
-            result.quote.outAmount,
-            result.toToken.decimals,
-            ConvertType.HUMAN
-          );
-
-          setSwapState((prev) => ({
-            ...prev,
-            swapRate: humanReadableOutAmount,
-            quoteResponse: result.quote,
-          }));
-        }
-      }, 500);
-
-      // Update the timer ID in state
-      setSwapState((prev) => ({ ...prev, fetchTimerId: timerId }));
+      // Update amount and fetch quote
+      updateAmountAndFetchQuote(formattedMaxAmount);
     }
-  }, [fromTokenBalance, setMaxAmount, setContextAmount, fetchQuote, swapState.fromToken, swapState.toToken, convertAmount]);
+  }, [fromTokenBalance, setContextAmount, swapState.fromToken, updateAmountAndFetchQuote]);
+  
+  // Handler for half amount - sets the input to half of the available balance
+  const handleHalfAmount = useCallback(() => {
+    if (fromTokenBalance && parseFloat(fromTokenBalance) > 0) {
+      const halfAmount = (parseFloat(fromTokenBalance) / 2).toString();
+      const formattedHalfAmount = formatToFiveDecimals(halfAmount);
+      
+      // Update the context and local state
+      setContextAmount(formattedHalfAmount);
+      
+      // Update amount and fetch quote
+      updateAmountAndFetchQuote(formattedHalfAmount);
+    }
+  }, [fromTokenBalance, setContextAmount, updateAmountAndFetchQuote]);
 
   // Swap tokens handler
   const handleSwapTokens = useCallback(() => {
@@ -567,8 +550,13 @@ const SwapCard: React.FC = () => {
     </div>
   );
 
-  const { fromToken, toToken, amount, swapRate, loading, quoteResponse } =
-    swapState;
+  // Get USD value of token amount
+  const getTokenValueInUSD = useCallback((amount: string, token: any): string => {
+    if (!amount || !token?.price) return '';
+    const value = parseFloat(amount) * (token.price || 0);
+    return value > 0.01 ? `$${value.toFixed(2)}` : '<$0.01';
+  }, []);
+  
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-md p-4 sm:p-6 w-full max-w-lg mx-auto transition-all duration-300">
       {/* From token input */}
@@ -581,7 +569,7 @@ const SwapCard: React.FC = () => {
           <span className="text-sm text-gray-500 dark:text-gray-400">
             You Pay
           </span>
-          {wallet.connected && fromToken && (
+          {wallet.connected && contextFromToken && (
             <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
               <span>Balance: {fromTokenBalance}</span>
               {fromTokenBalanceUsd && (
@@ -592,36 +580,42 @@ const SwapCard: React.FC = () => {
             </div>
           )}
         </div>
-        <input
-          type="text"
-          className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
-          placeholder="0"
-          value={amount}
-          onChange={(e) => handleFromAmountChange(e.target.value)}
-        />
-        {/* Token balance selection options */}
-        {wallet.connected && parseFloat(fromTokenBalance) > 0 && (
-          <div className="flex mt-2 mb-3 gap-2">
-            <button
-              onClick={handleHalfAmount}
-              className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
-            >
-              HALF
-            </button>
-            <button
-              onClick={handleMaxAmount}
-              className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
-            >
-              MAX
-            </button>
+        <div className="flex flex-col">
+          <div className="flex items-center">
+            <input
+              type="text"
+              className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
+              placeholder="0"
+              value={contextAmount || ''}
+              onChange={(e) => handleFromAmountChange(e.target.value)}
+            />
+            <TokenSelector
+              onSelect={handleFromTokenSelect}
+              currentToken={contextFromToken}
+              isInputToken={true}
+            />
           </div>
-        )}
-        <div className="flex justify-end">
-          <TokenSelector
-            onSelect={handleFromTokenSelect}
-            currentToken={fromToken}
-            isInputToken={true}
-          />
+          {contextAmount && parseFloat(contextAmount) > 0 && (
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {getTokenValueInUSD(contextAmount, contextFromToken)}
+            </div>
+          )}
+          {wallet.connected && parseFloat(fromTokenBalance) > 0 && (
+            <div className="flex mt-2 gap-2">
+              <button
+                onClick={handleHalfAmount}
+                className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+              >
+                HALF
+              </button>
+              <button
+                onClick={handleMaxAmount}
+                className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+              >
+                MAX
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -658,14 +652,14 @@ const SwapCard: React.FC = () => {
             You Receive
           </span>
         </div>
-        {loading ? (
+        {swapState.loading ? (
           <SkeletonLoader />
         ) : (
           <input
             type="text"
             className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
             placeholder="0"
-            value={swapRate || ""}
+            value={swapState.swapRate || ""}
             onChange={(e) => handleToAmountChange(e.target.value)}
             readOnly
           />
@@ -673,18 +667,20 @@ const SwapCard: React.FC = () => {
         <div className="flex justify-end">
           <TokenSelector
             onSelect={handleToTokenSelect}
-            currentToken={toToken}
+            currentToken={contextToToken}
           />
         </div>
       </div>
 
-      <SwapDetails
-        fromAmount={amount}
-        fromToken={fromToken}
-        toToken={toToken}
-        swapRate={swapRate}
-        quoteResponse={quoteResponse}
-      />
+      <div className="space-y-6">
+        <SwapDetails
+          fromAmount={contextAmount}
+          fromToken={contextFromToken}
+          toToken={contextToToken}
+          swapRate={swapState.swapRate}
+          quoteResponse={swapState.quoteResponse}
+        />
+      </div>
       {/* Action button */}
       <SwapButton
         onClick={handleSwap}
@@ -698,8 +694,11 @@ const SwapCard: React.FC = () => {
         loading={swapState.loading}
         walletConnected={wallet.connected}
         hasSufficientBalance={hasSufficientBalance}
-        // balanceError={balanceError}
       />
+      {/* Transaction History Section */}
+      <div className="mt-6">
+        <TransactionHistory className="mt-4" />
+      </div>
       {/* <Button
         variant="primary"
         className="w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300"
