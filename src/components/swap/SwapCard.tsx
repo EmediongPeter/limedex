@@ -20,7 +20,12 @@ import { useSwapContext } from "@/contexts/ContextProvider";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 
-const DEFAULT_TOKENS = {
+// Define a stricter type for our default tokens that includes the icon
+interface DefaultTokenInfo extends Omit<TokenInfo, 'icon' | 'logoURI'> {
+  icon: string; // Make icon required in our default tokens
+}
+
+const DEFAULT_TOKENS: { [key: string]: DefaultTokenInfo } = {
   SOL: {
     address: "So11111111111111111111111111111111111111112", // SOL mint address
     symbol: "SOL",
@@ -99,16 +104,36 @@ const SwapCard: React.FC = () => {
     fetchTimerId: null as NodeJS.Timeout | null,
   });
 
+  // Helper function to ensure token has required properties including icon
+  const ensureToken = (token: TokenInfo | undefined, defaultToken: DefaultTokenInfo): DefaultTokenInfo => {
+    if (!token) return defaultToken;
+    return {
+      ...token,
+      // Ensure icon is set, fallback to logoURI if available, otherwise use default
+      icon: token.icon || token.logoURI || defaultToken.icon,
+    } as DefaultTokenInfo;
+  };
+
   // Sync the local state with the context
   useEffect(() => {
     if (contextFromToken) {
-      setSwapState(prev => ({...prev, fromToken: contextFromToken}));
+      // Ensure the token has all required properties
+      const safeFromToken = ensureToken(contextFromToken, DEFAULT_TOKENS.SOL);
+      setSwapState(prev => ({
+        ...prev,
+        fromToken: safeFromToken
+      }));
     } else {
       setContextFromToken(DEFAULT_TOKENS.SOL);
     }
     
     if (contextToToken) {
-      setSwapState(prev => ({...prev, toToken: contextToToken}));
+      // Ensure the token has all required properties
+      const safeToToken = ensureToken(contextToToken, DEFAULT_TOKENS.USDC);
+      setSwapState(prev => ({
+        ...prev,
+        toToken: safeToToken
+      }));
     } else {
       setContextToToken(DEFAULT_TOKENS.USDC);
     }
@@ -116,7 +141,7 @@ const SwapCard: React.FC = () => {
     if (contextAmount !== swapState.amount) {
       setSwapState(prev => ({...prev, amount: contextAmount}));
     }
-  }, [contextFromToken, contextToToken, contextAmount]);
+  }, [contextFromToken, contextToToken, contextAmount, swapState.amount]);
 
   // Convert amount helper - memoized to prevent recreations
   const convertAmount = useCallback(

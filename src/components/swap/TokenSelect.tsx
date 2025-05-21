@@ -58,27 +58,59 @@ const TokenSelector = React.memo(({
   // Ensure tokens is always an array
   const safeTokens = Array.isArray(tokens) ? tokens : [];
 
-  // Get token prices for USD values
-  const { data: tokenPrices } = useSWR<Record<string, { price: number }>>(
-    'https://price.jup.ag/v4/price?ids=SOL',
+  // Define types for Jupiter price response
+  interface JupiterPriceResponse {
+    data: {
+      [mintAddress: string]: {
+        id: string;
+        mintSymbol: string;
+        vsToken: string;
+        vsTokenSymbol: string;
+        price: number;
+        timeTaken: number;
+      };
+    };
+    timeTaken: number;
+  }
+
+  // Get token prices for USD values using Jupiter v4 API
+  const { data: tokenPrices, error: pricesError } = useSWR<JupiterPriceResponse>(
+    // Only fetch prices when we have tokens to check
+    safeTokens.length > 0 
+      ? `https://price.jup.ag/v4/price?ids=${safeTokens.map(t => t.address).join(',')}`
+      : null,
     fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 30000,
+      dedupingInterval: 30000, // 30 seconds
+      refreshInterval: 60000,   // 1 minute
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Retry up to 3 times
+        if (retryCount >= 3) return;
+        // Retry after 5 seconds
+        setTimeout(() => revalidate({ retryCount }), 5000);
+      },
     }
   );
 
-  // Build enhanced tokens with balance information
+  // Log any price fetching errors
+  useEffect(() => {
+    if (pricesError) {
+      console.error('Error fetching token prices:', pricesError);
+    }
+  }, [pricesError]);
+
+  // Build enhanced tokens with balance and price information
   const tokensWithBalances = useMemo((): TokenWithBalance[] => {
+    // If no wallet or token accounts, return basic token info
     if (!wallet.publicKey || !tokenAccounts.length) return safeTokens as TokenWithBalance[];
 
     // Create a map of token addresses to their accounts
     const tokenBalanceMap = new Map();
 
     // Add SOL balance
-    let solBalance = "0";
     connection.getBalance(wallet.publicKey).then(balance => {
-      solBalance = (balance / LAMPORTS_PER_SOL).toFixed(4);
+      const solBalance = (balance / LAMPORTS_PER_SOL).toFixed(4);
       tokenBalanceMap.set(NATIVE_MINT.toString(), {
         balance: solBalance,
         mint: NATIVE_MINT.toString(),
@@ -87,42 +119,48 @@ const TokenSelector = React.memo(({
 
     // Process token accounts to build the map
     tokenAccounts.forEach((account: any) => {
-      const parsedInfo = account.account.data.parsed.info;
-      const mintAddress = parsedInfo.mint;
-      const balance = parsedInfo.tokenAmount.uiAmount;
+      try {
+        const parsedInfo = account.account?.data?.parsed?.info;
+        if (!parsedInfo) return;
+        
+        const mintAddress = parsedInfo.mint;
+        const balance = parsedInfo.tokenAmount?.uiAmount;
 
-      if (balance > 0) {
-        tokenBalanceMap.set(mintAddress, {
-          balance: balance.toString(),
-          mint: mintAddress,
-        });
+        if (balance > 0) {
+          tokenBalanceMap.set(mintAddress, {
+            balance: balance.toString(),
+            mint: mintAddress,
+          });
+        }
+      } catch (error) {
+        console.error('Error processing token account:', error);
       }
     });
 
-    // Enhance the tokens with balance information
+    // Enhance the tokens with balance and price information
     return safeTokens.map(token => {
-      const tokenAccount = tokenBalanceMap.get(token.address);
-      const solPrice = tokenPrices?.SOL?.price || 0;
-
-      if (tokenAccount) {
-        // Calculate USD value (approximate calculation)
-        // For more accurate prices, you'd need to fetch token prices from an API
-        let usdValue = "0.00";
-        if (token.symbol === "SOL") {
-          usdValue = (parseFloat(tokenAccount.balance) * solPrice).toFixed(2);
-        } else {
-          // This is a simplification - in a real app you'd need token prices from an API
-          usdValue = "--";
-        }
-
+      try {
+        const tokenAccount = tokenBalanceMap.get(token.address);
+        const priceInfo = tokenPrices?.data?.[token.address];
+        const usdPrice = priceInfo?.price || 0;
+        const balance = tokenAccount?.balance || '0';
+        const usdValue = parseFloat(balance) > 0 ? (parseFloat(balance) * usdPrice).toFixed(2) : '0';
+        
         return {
           ...token,
-          balance: tokenAccount.balance,
+          balance,
           usdValue,
-          owned: true,
-        };
+          owned: !!tokenAccount,
+        } as TokenWithBalance;
+      } catch (error) {
+        console.error(`Error enhancing token ${token.symbol}:`, error);
+        return {
+          ...token,
+          balance: '0',
+          usdValue: '0',
+          owned: false,
+        } as TokenWithBalance;
       }
-      return token as TokenWithBalance;
     });
   }, [safeTokens, wallet.publicKey, tokenAccounts, connection, tokenPrices]);
 
