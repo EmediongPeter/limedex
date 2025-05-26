@@ -69,7 +69,6 @@ export const fetchTokenPrice = async (mintAddress: string) => {
   );
   if (!response.ok) throw new Error("Failed to fetch token price");
   const data = await response.json();
-  console.log(data);
   return data.data[mintAddress];
 };
 

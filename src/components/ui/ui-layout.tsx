@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
-import { ReactNode, Suspense, useEffect, useRef } from "react";
+import { ReactNode, Suspense, useEffect, useRef, useState } from "react";
 import toast, { LoaderIcon, Toaster } from "react-hot-toast";
 import { AccountChecker } from "../account/account-ui";
 import {
@@ -14,6 +14,8 @@ import {
 import { WalletButton } from "../solana/solana-provider";
 import { TokenSearchModal } from "../SearchTokenModal";
 import { TokenSearch } from "../search/token-search";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useTheme } from "next-themes";
 
 export function UiLayout({
   children,
@@ -23,83 +25,101 @@ export function UiLayout({
   links: { label: string; path: string }[];
 }) {
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const { theme, resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark' || theme === 'dark';
+  
+  // Close sidebar when path changes (navigation occurs)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+  
+  // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    if (sidebarOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen, isMobile]);
 
   return (
-    <div className="h-full flex flex-col justify-between items-center px-6 py-4 relative ">
-      <div className="navbar bg-base-300/50 dark:text-neutral-content rounded-3xl px-4">
-        {/* Mobile menu button (hidden on desktop) */}
-        <div className="md:hidden flex-1 flex items-center justify-between">
-          <Link className="btn btn-ghost text-xl" href="/">
-            <div className="flex items-center font-semibold text-xl text-primary-purple">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="mr-2"
+    <>
+      {/* Mobile Sidebar - Completely outside the main component tree for proper z-index */}
+      {isMobile && sidebarOpen && (
+        <div className="fixed inset-0 z-[9999] overflow-hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 backdrop-enter"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+          
+          {/* Sidebar panel */}
+          <div 
+            className={`fixed top-0 right-0 h-full w-3/4 max-w-xs ${isDarkMode ? 'bg-gray-900' : 'bg-white'} 
+            shadow-xl sidebar-enter flex flex-col`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sidebar-title"
+          >
+            {/* Header */}
+            <div className={`px-4 py-4 flex items-center justify-between border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <h2 id="sidebar-title" className="text-lg font-semibold">Menu</h2>
+              <button 
+                onClick={() => setSidebarOpen(false)}
+                className="btn btn-ghost btn-sm p-1 h-8 w-8 rounded-full active:scale-95 transition-transform"
+                aria-label="Close menu"
               >
-                <path
-                  d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                  fill="#a78bfa"
-                  fillOpacity="0.2"
-                />
-                <path
-                  d="M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12Z"
-                  fill="#a78bfa"
-                />
-              </svg>
-              <span>Lime Dex</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          </Link>
-          <div className="dropdown dropdown-end">
-            <label tabIndex={0} className="btn btn-ghost md:hidden">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </label>
-            <ul
-              tabIndex={0}
-              className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-            >
-              {links.map(({ label, path }) => (
-                <li key={path}>
-                  <Link
-                    className={pathname.startsWith(path) ? "active" : ""}
-                    href={path}
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <TokenSearch mobile />
-              </li>
-              <li>
-                <WalletButton />
-              </li>
-              <li>
-                <ClusterUiSelect />
-              </li>
-            </ul>
+            
+            {/* Menu content */}
+            <div className="flex-1 overflow-y-auto py-2">
+              <ul className="menu menu-md p-2 w-full">
+                {links.map(({ label, path }) => (
+                  <li key={path} className="my-1">
+                    <Link
+                      className={`rounded-lg px-4 py-3 ${pathname.startsWith(path) 
+                        ? `${isDarkMode ? 'bg-primary/20 text-primary' : 'bg-primary/10 text-primary'}` 
+                        : ''} active:scale-[0.98] transition-transform`}
+                      href={path}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="px-4 py-4">
+                <div className="divider my-2 before:bg-gray-700 after:bg-gray-700 opacity-50">Search</div>
+                <div className="mb-6">
+                  <TokenSearch mobile />
+                </div>
+                
+                <div className="divider my-2 before:bg-gray-700 after:bg-gray-700 opacity-50">Wallet</div>
+                <div className="flex justify-center mb-6">
+                  <WalletButton />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Desktop layout (hidden on mobile) */}
-        <div className="hidden md:flex flex-1 items-center justify-between">
-          <div className="flex items-center">
-            <Link className="btn btn-ghost normal-case text-xl" href="/">
+      <div className="h-full flex flex-col justify-between items-center md:px-6 py-4 relative">
+        {/* Mobile navbar (fixed position) */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-2 bg-base-300/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            {/* Logo */}
+            <Link href="/" className="flex items-center">
               <div className="flex items-center font-semibold text-xl text-primary-purple">
                 <svg
                   width="24"
@@ -119,26 +139,98 @@ export function UiLayout({
                     fill="#a78bfa"
                   />
                 </svg>
-                <span>Lime Dex</span>
+                <span className="hidden xs:inline">Lime Dex</span>
               </div>
             </Link>
+            
+            {/* Search button - opens search dropdown */}
+            <div className="hidden xs:flex">
+              <div className="relative w-36 sm:w-52">
+                <TokenSearch mobile />
+              </div>
+            </div>
+            
+            {/* Wallet button (smaller on mobile) */}
+            <div className="flex items-center">
+              <div className="transform scale-75 origin-right">
+                <WalletButton compact={true} />
+              </div>
+            
+              {/* Hamburger menu */}
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 rounded-full active:scale-95 transition-transform ml-1"
+                aria-label="Open menu"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Add a skip navigation link for accessibility */}
+            <div className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-primary focus:text-white focus:p-4">
+              <a href="#main-content" className="p-2">Skip to main content</a>
+            </div>
+          </div>
+        </div>
 
-            <ul className="flex items-center gap-2 px-1 text-base">
-              {links.map(({ label, path }) => (
-                <li key={path}>
-                  <Link
-                    className={`px-3 py-2 rounded-lg transition-colors ${
-                      pathname.startsWith(path)
-                        ? "bg-primary-purple text-white"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                    }`}
-                    href={path}
+        {/* Desktop navbar (hidden on mobile) */}
+        <div className="hidden md:flex navbar bg-base-300/50 dark:text-neutral-content rounded-3xl px-4 mt-4">
+          <div className="flex-1 flex items-center justify-between">
+            <div className="flex items-center">
+              <Link className="btn btn-ghost normal-case text-xl" href="/">
+                <div className="flex items-center font-semibold text-xl text-primary-purple">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="mr-2"
                   >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    <path
+                      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                      fill="#a78bfa"
+                      fillOpacity="0.2"
+                    />
+                    <path
+                      d="M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12Z"
+                      fill="#a78bfa"
+                    />
+                  </svg>
+                  <span>Lime Dex</span>
+                </div>
+              </Link>
+
+              <ul className="flex items-center gap-2 px-1 text-base">
+                {links.map(({ label, path }) => (
+                  <li key={path}>
+                    <Link
+                      className={`px-3 py-2 rounded-lg transition-colors ${
+                        pathname.startsWith(path)
+                          ? "bg-primary-purple text-white"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                      }`}
+                      href={path}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
           <div className="">
             <TokenSearch />
@@ -149,23 +241,19 @@ export function UiLayout({
             {/* <ClusterUiSelect /> */}
           </div>
         </div>
-      </div>
-      <ClusterChecker>
+
+        <Toaster position="bottom-right" />
         <AccountChecker />
-      </ClusterChecker>
-      <div className="flex-grow mx-4 lg:mx-auto">
-        <Suspense
-          fallback={
-            <div className="text-center my-32">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
-          }
-        >
-          {children}
-        </Suspense>
-        <Toaster position="bottom-left" />
-      </div>
-      <div className="hidden">
+        <ClusterChecker>
+          {/* Add padding top on mobile to account for fixed navbar */}
+          <div className="grow flex flex-col p-4 pt-20 md:pt-4 md:p-8 mx-auto max-w-3xl w-full">
+            <Suspense>
+              <div className="grow">{children}</div>
+            </Suspense>
+            <Toaster position="bottom-left" />
+          </div>
+        </ClusterChecker>
+        <div className="hidden">
         <li>
           Find a way to create my own personalized UI for the modal of wallet
           connections like the one on uniswap but for now let it be there
@@ -252,9 +340,12 @@ export function UiLayout({
           </p>
         </aside>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }
+
+// Rest of the code remains the same...
 
 export function AppModal({
   children,

@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { QuoteResponse, TokenInfo } from "@/types/token-info";
 import TransactionHistory from "./TransactionHistory";
 import SlippageSettings from "./SlippageSettings";
-import { fetchSwapQuote, signAndExecuteSwap } from "@/utils/token-utils";
+import { fetchSwapQuote, signAndExecuteSwap, fetchTokenPrice } from "@/utils/token-utils";
 import { validateInput } from "@/utils/valid-input";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import SwapDetails from "./SwapDetails";
@@ -71,6 +72,7 @@ const SwapCard: React.FC = () => {
     ensureBigIntSupport();
   }, []);
   
+  const isMobile = useIsMobile();
   const wallet = useWallet();
   const { connection } = useConnection();
   const { slippage } = useSettings();
@@ -78,7 +80,6 @@ const SwapCard: React.FC = () => {
   const tokenAccounts = useGetTokenAccounts({ address: wallet.publicKey });
   const transactionToast = useTransactionToast();
   const notificationToast = useNotificationToast();
-  // const toast = useToaster();
   const { showSuccessToast, showErrorToast, showLoadingToast } = useCustomToasts();
 
   // Use the swap context
@@ -106,6 +107,8 @@ const SwapCard: React.FC = () => {
     quoteResponse: undefined as QuoteResponse | undefined,
     activeInput: ActiveInput.FROM,
     fetchTimerId: null as NodeJS.Timeout | null,
+    fromTokenUsdPrice: null as number | null,
+    toTokenUsdPrice: null as number | null,
   });
 
   // Helper function to ensure token has required properties including icon
@@ -636,32 +639,62 @@ const SwapCard: React.FC = () => {
   );
 
   // Get USD value of token amount
-  const getTokenValueInUSD = useCallback((amount: string, token: any): string => {
-    if (!amount || !token?.price) return '';
-    const value = parseFloat(amount) * (token.price || 0);
+  const getTokenValueInUSD = useCallback((amount: string, tokenPrice: number | null): string => {
+    if (!amount || !tokenPrice) return '';
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return '';
+    
+    const value = numAmount * (tokenPrice || 0);
     return value > 0.01 ? `$${value.toFixed(2)}` : '<$0.01';
   }, []);
   
+  // Fetch token prices when tokens change
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        if (swapState.fromToken?.address) {
+          const fromPriceData = await fetchTokenPrice(swapState.fromToken.address);
+          setSwapState(prev => ({
+            ...prev,
+            fromTokenUsdPrice: fromPriceData?.price || null
+          }));
+        }
+        
+        if (swapState.toToken?.address) {
+          const toPriceData = await fetchTokenPrice(swapState.toToken.address);
+          setSwapState(prev => ({
+            ...prev,
+            toTokenUsdPrice: toPriceData?.price || null
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching token prices:', error);
+      }
+    };
+    
+    fetchPrices();
+  }, [swapState.fromToken?.address, swapState.toToken?.address]);
+  
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-md p-4 sm:p-6 w-full max-w-lg mx-auto transition-all duration-300">
+    <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-3xl shadow-md p-3 sm:p-4 md:p-6 w-full max-w-lg mx-auto transition-all duration-300">
       {/* From token input */}
       {/* 1. Responsive view of the navbar */}
       {/* 2. Responsive view of the swap card */}
       {/* 3. Jupiter swap API IMPLEMENTATION */}
 
-      <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 mb-3 border border-gray-200 dark:border-slate-700 mt-1">
+      <div className="bg-gray-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-gray-200 dark:border-slate-700 mt-1">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             Swap
           </h2>
           <SlippageSettings />
         </div>
-        <div className="flex justify-between mb-2">
+        <div className={`flex ${isMobile ? 'flex-col' : 'justify-between'} mb-2`}>
           <span className="text-sm text-gray-500 dark:text-gray-400">
             You Pay
           </span>
           {wallet.connected && contextFromToken && (
-            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <div className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${isMobile ? 'mt-1' : ''}`}>
               <span>Balance: {fromTokenBalance}</span>
               {fromTokenBalanceUsd && (
                 <span className="ml-1 text-gray-400 dark:text-gray-500">
@@ -687,21 +720,21 @@ const SwapCard: React.FC = () => {
             />
           </div>
           {contextAmount && parseFloat(contextAmount) > 0 && (
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {getTokenValueInUSD(contextAmount, contextFromToken)}
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-right">
+              {getTokenValueInUSD(contextAmount, swapState.fromTokenUsdPrice)}
             </div>
           )}
           {wallet.connected && parseFloat(fromTokenBalance) > 0 && (
-            <div className="flex mt-2 gap-2">
+            <div className={`flex mt-2 ${isMobile ? 'grid grid-cols-2' : 'gap-2'}`}>
               <button
                 onClick={handleHalfAmount}
-                className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+                className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium mr-2 sm:mr-0"
               >
                 HALF
               </button>
               <button
                 onClick={handleMaxAmount}
-                className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+                className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
               >
                 MAX
               </button>
@@ -714,7 +747,7 @@ const SwapCard: React.FC = () => {
       <div className="flex justify-center my-1">
         <button
           onClick={handleSwapTokens}
-          className="w-10 h-10 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center cursor-pointer border-4 border-white dark:border-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors duration-200"
+          className="w-10 h-10 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center cursor-pointer border-4 border-white dark:border-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors duration-200 active:scale-95 touch-manipulation"
           aria-label="Swap tokens"
         >
           <svg
@@ -737,29 +770,36 @@ const SwapCard: React.FC = () => {
       </div>
 
       {/* To token input */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 mb-3 border border-gray-200 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-gray-200 dark:border-slate-700">
         <div className="flex justify-between mb-2">
           <span className="text-sm text-gray-500 dark:text-gray-400">
             You Receive
           </span>
         </div>
-        {swapState.loading ? (
-          <SkeletonLoader />
-        ) : (
-          <input
-            type="text"
-            className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
-            placeholder="0"
-            value={swapState.swapRate || ""}
-            onChange={(e) => handleToAmountChange(e.target.value)}
-            readOnly
-          />
-        )}
-        <div className="flex justify-end">
-          <TokenSelector
-            onSelect={handleToTokenSelect}
-            currentToken={contextToToken}
-          />
+        <div className="flex flex-col">
+          <div className="flex items-center">
+            {swapState.loading ? (
+              <SkeletonLoader />
+            ) : (
+              <input
+                type="text"
+                className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
+                placeholder="0"
+                value={swapState.swapRate || ""}
+                onChange={(e) => handleToAmountChange(e.target.value)}
+                readOnly
+              />
+            )}
+            <TokenSelector
+              onSelect={handleToTokenSelect}
+              currentToken={contextToToken}
+            />
+          </div>
+          {swapState.swapRate && parseFloat(swapState.swapRate) > 0 && (
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-right">
+              {getTokenValueInUSD(swapState.swapRate, swapState.toTokenUsdPrice)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -786,10 +826,6 @@ const SwapCard: React.FC = () => {
         walletConnected={wallet.connected}
         hasSufficientBalance={hasSufficientBalance}
       />
-      {/* Transaction History Section */}
-      <div className="mt-6">
-        <TransactionHistory className="mt-4" />
-      </div>
       {/* <Button
         variant="primary"
         className="w-full py-3 sm:py-4 mt-4 text-base font-semibold rounded-xl transition-all duration-300"

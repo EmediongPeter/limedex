@@ -7,6 +7,7 @@ import { SwapProvider } from '@/contexts/ContextProvider'
 import { SettingsProvider } from '@/contexts/SettingsContext'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { ThemeProvider } from 'next-themes'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,6 +19,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Lime Dex',
   description: 'Swap anytime, anywhere. The leading decentralized crypto trading protocol.',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 }
 
 const links: { label: string; path: string }[] = [
@@ -46,15 +48,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ReactQueryProvider>
-          <ClusterProvider>
-            <SolanaProvider>
-              <SwapProvider>
-                <SettingsProvider>
-                  <UiLayout links={links}>{children}</UiLayout>
-                </SettingsProvider>
-              </SwapProvider>
-            </SolanaProvider>
-          </ClusterProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ClusterProvider>
+              <SolanaProvider>
+                <SwapProvider>
+                  <SettingsProvider>
+                    <UiLayout links={links}>{children}</UiLayout>
+                  </SettingsProvider>
+                </SwapProvider>
+              </SolanaProvider>
+            </ClusterProvider>
+          </ThemeProvider>
         </ReactQueryProvider>
       </body>
     </html>
