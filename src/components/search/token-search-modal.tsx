@@ -1,6 +1,8 @@
 "use client";
 
 import { TokenInfo } from "@/types/token-info";
+import { useRef } from "react";
+import useClickOutside from "@/hooks/useClickOutside";
 
 export function TokenSearchModal({
   tokens,
@@ -17,8 +19,14 @@ export function TokenSearchModal({
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Use our custom hook to handle clicks outside the modal
+  useClickOutside(modalRef, onClose);
+  
   return (
     <div 
+      ref={modalRef}
       className="
         absolute 
         top-full 
@@ -59,10 +67,6 @@ export function TokenSearchModal({
   );
 }
 
-// export function TokenSearchModal({
-//   tokens,
-//   isLoading,
-//   onSelect,
 //   onClose,
 //   searchQuery,
 //   setSearchQuery,

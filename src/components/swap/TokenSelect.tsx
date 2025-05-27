@@ -30,6 +30,8 @@ const TokenSelector = React.memo(({
   currentToken?: TokenInfo | null;
   isInputToken?: boolean;
 }) => {
+  // Force a consistent layout regardless of isInputToken
+  // This ensures text displays properly in both "You Pay" and "You Receive" sections
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -297,16 +299,25 @@ const TokenSelector = React.memo(({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center space-x-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+        className="flex items-center space-x-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 min-w-[120px] max-w-[140px]"
       >
         {currentToken?.icon && (
           <img
             src={currentToken.icon}
             alt={currentToken.symbol}
-            className="w-6 h-6 rounded-full"
+            className="w-6 h-6 rounded-full flex-shrink-0"
           />
         )}
-        <span>{currentToken ? currentToken.symbol : "Select Token"}</span>
+        <span className="truncate overflow-hidden flex-1">{currentToken ? currentToken.symbol : "Select Token"}</span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="h-4 w-4 flex-shrink-0" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
 
       {isOpen && (
@@ -474,26 +485,26 @@ const TokenItem: React.FC<TokenItemProps> = ({
           <img
             src={token.icon || 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'}
             alt={token.symbol}
-            className={`${isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full`}
+            className={`${isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex-shrink-0`}
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png';
             }}
           />
-          <div className="text-left">
-            <div className="font-medium flex items-center">
-              {token.symbol}
+          <div className="text-left min-w-0 flex-1">
+            <div className="font-medium flex items-center flex-wrap">
+              <span className="truncate mr-1">{token.symbol}</span>
               {isOwnedToken && (
-                <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-sm ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'}`}>
+                <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-sm flex-shrink-0 ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'}`}>
                   Owned
                 </span>
               )}
             </div>
-            <div className={`text-sm truncate max-w-[180px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{token.name}</div>
+            <div className={`text-sm truncate w-full ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{token.name}</div>
           </div>
         </div>
 
         {isOwnedToken && token.balance && (
-          <div className="text-right">
+          <div className="text-right flex-shrink-0 ml-2">
             <div className="font-medium">{parseFloat(token.balance) > 0 ? parseFloat(token.balance).toFixed(6) : '0'}</div>
             {token.usdValue && parseFloat(token.usdValue) > 0 && (
               <div className="text-sm text-gray-400">${token.usdValue}</div>
@@ -504,11 +515,11 @@ const TokenItem: React.FC<TokenItemProps> = ({
       
       {/* Contract address row */}
       <div className={`mt-2 flex items-center justify-between text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-        <div className="flex items-center space-x-1">
-          <span className="font-mono">{formatAddress(token.address)}</span>
+        <div className="flex items-center space-x-1 min-w-0 flex-1 overflow-hidden">
+          <span className="font-mono truncate">{formatAddress(token.address)}</span>
           <button 
             onClick={(e) => onCopyAddress(e, token.address)}
-            className={`p-1.5 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} rounded-full`}
+            className={`p-1.5 flex-shrink-0 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} rounded-full`}
             aria-label="Copy address"
           >
             {isCopied ? <FiCheck size={14} className="text-green-500" /> : <FiCopy size={14} />}
@@ -520,7 +531,7 @@ const TokenItem: React.FC<TokenItemProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className={`flex items-center space-x-1 p-1.5 ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
+          className={`flex items-center space-x-1 p-1.5 flex-shrink-0 ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
           aria-label="View on Solscan"
         >
           <span className={isMobile ? '' : 'hidden sm:inline'}>View</span>

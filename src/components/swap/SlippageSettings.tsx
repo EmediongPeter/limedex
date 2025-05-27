@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSettings } from '@/contexts/SettingsContext';
+import useClickOutside from '@/hooks/useClickOutside';
 
 const PRESETS = [
   { label: '0.1%', value: 10 },
@@ -11,6 +12,12 @@ const SlippageSettings: React.FC = () => {
   const { slippage, setSlippage, slippageInput, setSlippageInput } = useSettings();
   const [isCustom, setIsCustom] = useState(!PRESETS.some(preset => preset.value === slippage));
   const [isOpen, setIsOpen] = useState(false);
+  const slippageRef = useRef<HTMLDivElement>(null);
+  
+  // Close slippage settings when clicking outside
+  useClickOutside(slippageRef, () => {
+    if (isOpen) setIsOpen(false);
+  });
 
   // Update custom input when slippage changes from outside
   useEffect(() => {
@@ -73,7 +80,7 @@ const SlippageSettings: React.FC = () => {
   };
 
   return (
-    <div className="relative">
+    <div ref={slippageRef} className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
