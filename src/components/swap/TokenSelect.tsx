@@ -325,7 +325,7 @@ const TokenSelector = React.memo(({
           <div 
             ref={modalRef}
             className={`${isDarkMode ? 'bg-gray-900 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'} 
-              ${isMobile ? 'h-full w-full rounded-none' : 'rounded-lg max-w-md'} 
+              ${isMobile ? 'h-full w-full rounded-none' : 'rounded-lg max-w-2xl w-full'} 
               flex flex-col border shadow-xl overflow-hidden`}
           >
             <div className={`flex items-center justify-between p-4 pb-2 ${isMobile ? 'border-b border-gray-800' : 'mb-2'}`}>

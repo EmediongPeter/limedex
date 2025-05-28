@@ -25,84 +25,66 @@ export function TokenSearchModal({
   useClickOutside(modalRef, onClose);
   
   return (
-    <div 
-      ref={modalRef}
-      className="
-        absolute 
-        top-full 
-        left-0 
-        mt-0 
-        bg-white 
-        dark:bg-slate-800 
-        rounded-b-2xl 
-        shadow-xl 
-        z-50 
-        max-h-[60vh] 
-        overflow-hidden 
-        border 
-        border-border-color
-        w-full
-      "
-    >
-      <div className="p-4">
-        <div className="space-y-2 overflow-y-auto max-h-[50vh]">
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-16 sm:pt-24 bg-black bg-opacity-50 backdrop-blur-sm">
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl mx-4 overflow-hidden shadow-xl"
+      >
+        {/* Search header */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-3 border-0 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-sm"
+              placeholder="Search by token name or address"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+        
+        {/* Search content */}
+        <div className="p-4 max-h-[65vh] overflow-y-auto">
           {isLoading ? (
             <LoadingSkeleton />
           ) : tokens.length === 0 ? (
-            <div className="text-center py-4 text-gray-500 text-sm">
-              No tokens found
+            <div className="text-center py-8">
+              <div className="text-gray-500 dark:text-gray-400">No tokens found</div>
+              <p className="mt-1 text-sm text-gray-400">Try a different search term</p>
             </div>
           ) : (
-            tokens.map((token) => (
-              <TokenItem
-                key={token.address}
-                token={token}
-                onSelect={onSelect}
-              />
-            ))
+            <div className="space-y-2">
+              {tokens.map((token) => (
+                <TokenItem
+                  key={token.address}
+                  token={token}
+                  onSelect={onSelect}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 }
-
-//   onClose,
-//   searchQuery,
-//   setSearchQuery,
-// }: {
-//   tokens: TokenInfo[];
-//   isLoading: boolean;
-//   onSelect: (token: TokenInfo) => void;
-//   onClose: () => void;
-//   searchQuery: string;
-//   setSearchQuery: (query: string) => void;
-// }) {
-//   return (
-//     <div  className="absolute top-full left-0 mt-0 bg-white dark:bg-slate-800 rounded-b-2xl shadow-xl z-50 max-h-[60vh] overflow-hidden border border-border-color"
-//     style={{ width: 'var(--search-width)' }}>
-//       <div className="p-4">
-//         <div className="space-y-2 overflow-y-auto max-h-[50vh]">
-//           {isLoading ? (
-//             <LoadingSkeleton />
-//           ) : tokens.length === 0 ? (
-//             <div className="text-center py-4 text-gray-500 text-sm">
-//               No tokens found
-//             </div>
-//           ) : (
-//             tokens.map((token) => (
-//               <TokenItem
-//                 key={token.address}
-//                 token={token}
-//                 onSelect={onSelect}
-//               />
-//             ))
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
 
 function LoadingSkeleton() {
   return (
@@ -126,23 +108,31 @@ function TokenItem({
 }) {
   return (
     <button
-      className="flex items-center w-full p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+      className="flex items-center justify-between w-full p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
       onClick={() => onSelect(token)}
     >
-      {token.logoURI && (
+      <div className="flex items-center">
         <img
-          src={token.logoURI}
+          src={token.logoURI || '/fallback-token-icon.png'}
           alt={token.symbol}
-          className="w-6 h-6 rounded-full mr-2"
+          className="w-10 h-10 rounded-full mr-3"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/fallback-token-icon.png';
+          }}
           loading="lazy"
-          width={24}
-          height={24}
+          width={40}
+          height={40}
         />
-      )}
-      <div className="text-left">
-        <div className="text-sm font-medium dark:text-white">{token.symbol}</div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {token.name}
+        <div className="text-left">
+          <div className="font-medium text-gray-900 dark:text-white">{token.symbol}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
+            {token.name}
+            {token.address && (
+              <span className="ml-2 text-xs opacity-70">
+                {token.address.substring(0, 4)}...{token.address.substring(token.address.length - 4)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>

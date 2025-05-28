@@ -50,12 +50,12 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
         <span>
           You are connected to <strong>{cluster.name}</strong> but your account is not found on this cluster.
         </span>
-        <button
+        {/* <button
           className="btn btn-xs btn-neutral"
           onClick={() => mutation.mutateAsync(1).catch((err) => console.log(err))}
         >
           Request Airdrop
-        </button>
+        </button> */}
       </div>
     )
   }
