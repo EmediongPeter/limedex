@@ -3,7 +3,7 @@ import { ClusterProvider } from '@/components/cluster/cluster-data-access'
 import { SolanaProvider } from '@/components/solana/solana-provider'
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
-import { SwapProvider } from '@/contexts/ContextProvider'
+import { AppContextProvider } from '@/contexts/ContextProvider'
 import { SettingsProvider } from '@/contexts/SettingsContext'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
@@ -24,8 +24,8 @@ export const metadata: Metadata = {
 
 const links: { label: string; path: string }[] = [
   { label: 'Account', path: '/account' },
-  { label: 'Clusters', path: '/clusters' },
-  { label: 'Counter Program', path: '/counter' },
+  // { label: 'Clusters', path: '/clusters' },
+  // { label: 'Counter Program', path: '/counter' },
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -51,11 +51,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <ClusterProvider>
               <SolanaProvider>
-                <SwapProvider>
+                <AppContextProvider>
                   <SettingsProvider>
                     <UiLayout links={links}>{children}</UiLayout>
                   </SettingsProvider>
-                </SwapProvider>
+                </AppContextProvider>
               </SolanaProvider>
             </ClusterProvider>
           </ThemeProvider>

@@ -12,10 +12,11 @@ import {
   ExplorerLink,
 } from "../cluster/cluster-ui";
 import { WalletButton } from "../solana/solana-provider";
-import { TokenSearchModal } from "../SearchTokenModal";
-import { TokenSearch } from "../search/token-search";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTheme } from "next-themes";
+import { SearchButton } from "../search/SearchButton";
+import { EnhancedSearchModal } from "../search/EnhancedSearchModal";
+import axios from "axios";
 
 export function UiLayout({
   children,
@@ -46,7 +47,7 @@ export function UiLayout({
       document.body.style.overflow = '';
     };
   }, [sidebarOpen, isMobile]);
-
+  
   return (
     <>
       {/* Mobile Sidebar - Completely outside the main component tree for proper z-index */}
@@ -100,8 +101,8 @@ export function UiLayout({
               
               <div className="px-4 py-4">
                 <div className="divider my-2 before:bg-gray-700 after:bg-gray-700 opacity-50">Search</div>
-                <div className="mb-6">
-                  <TokenSearch mobile />
+                <div className="mb-6 flex justify-center">
+                  <SearchButton />
                 </div>
                 
                 <div className="divider my-2 before:bg-gray-700 after:bg-gray-700 opacity-50">Wallet</div>
@@ -146,7 +147,7 @@ export function UiLayout({
             {/* Search button - opens search dropdown */}
             <div className="hidden xs:flex">
               <div className="relative w-36 sm:w-52">
-                <TokenSearch mobile />
+                <SearchButton />
               </div>
             </div>
             
@@ -157,7 +158,7 @@ export function UiLayout({
               </div>
             
               {/* Hamburger menu */}
-              <button 
+              <button
                 onClick={() => setSidebarOpen(true)}
                 className="p-2 rounded-full active:scale-95 transition-transform ml-1"
                 aria-label="Open menu"
@@ -178,10 +179,8 @@ export function UiLayout({
                 </svg>
               </button>
             </div>
-            
-            {/* Add a skip navigation link for accessibility */}
-            <div className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-primary focus:text-white focus:p-4">
-              <a href="#main-content" className="p-2">Skip to main content</a>
+            <div className="navbar-end">
+              <WalletButton />
             </div>
           </div>
         </div>
@@ -231,19 +230,22 @@ export function UiLayout({
                 ))}
               </ul>
             </div>
-          </div>
-          <div className="">
-            <TokenSearch />
-          </div>
-
-          <div className="flex-none space-x-2">
-            <WalletButton />
-            {/* <ClusterUiSelect /> */}
+            
+            {/* Centered search button */}
+            <div className="flex justify-center">
+              <SearchButton />
+            </div>
+            
+            <div className="flex-none space-x-2">
+              <WalletButton />
+              {/* <ClusterUiSelect /> */}
+            </div>
           </div>
         </div>
 
         <Toaster position="bottom-right" />
         <AccountChecker />
+        <EnhancedSearchModal />
         <ClusterChecker>
           {/* Add padding top on mobile to account for fixed navbar */}
           <div className="grow flex flex-col p-4 pt-20 md:pt-4 md:p-8 mx-auto max-w-3xl w-full">

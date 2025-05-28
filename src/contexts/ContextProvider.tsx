@@ -7,6 +7,7 @@ import { useGetBalance, useGetTokenAccounts } from '@/components/account/account
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import { fetchTokenPrice } from '@/utils/token-utils';
 import { NATIVE_MINT } from '@solana/spl-token';
+import { SearchProvider } from './SearchContext';
 
 // Define the types for our context
 type SwapContextType = {
@@ -50,6 +51,16 @@ const SwapContext = createContext<SwapContextType>({
   setToToken: () => {},
 });
 
+// Main provider that wraps all other providers
+export const AppContextProvider = ({ children }: { children: ReactNode }) => {
+  return (
+    <SearchProvider>
+      <SwapProvider>{children}</SwapProvider>
+    </SearchProvider>
+  );
+};
+
+// Swap provider for token swap functionality
 export const SwapProvider = ({ children }: { children: ReactNode }) => {
   const { connection } = useConnection();
   const wallet = useWallet();
