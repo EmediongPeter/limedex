@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { QuoteResponse, TokenInfo } from "@/types/token-info";
+import TradingViewChart from "../chart/TradingViewChart";
 import TransactionHistory from "./TransactionHistory";
 import SlippageSettings from "./SlippageSettings";
 import { fetchSwapQuote, signAndExecuteSwap, fetchTokenPrice } from "@/utils/token-utils";
@@ -23,6 +24,7 @@ import { useSwapContext } from "@/contexts/ContextProvider";
 import { useSettings } from "@/contexts/SettingsContext";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
+import SwapLayout from "./SwapLayout";
 
 // Define a stricter type for our default tokens that includes the icon
 interface DefaultTokenInfo extends Omit<TokenInfo, 'icon' | 'logoURI'> {
@@ -66,7 +68,17 @@ const ensureBigIntSupport = () => {
   }
 };
 
-const SwapCard: React.FC = () => {
+const getTradingViewSymbol = (token: TokenInfo): string | null => {
+  // Example mapping for major tokens, expand as needed
+  const symbolMap: Record<string, string> = {
+    'SOL': 'BINANCE:SOLUSDT',
+    'USDC': 'BINANCE:USDCUSDT',
+    // Add more mappings for popular tokens here
+  };
+  return symbolMap[token.symbol] || null;
+};
+
+const SwapCard = () => {
   // Check for BigInt support on component mount
   useEffect(() => {
     ensureBigIntSupport();
@@ -110,6 +122,7 @@ const SwapCard: React.FC = () => {
     fromTokenUsdPrice: null as number | null,
     toTokenUsdPrice: null as number | null,
   });
+
 
   // Helper function to ensure token has required properties including icon
   const ensureToken = (token: TokenInfo | undefined, defaultToken: DefaultTokenInfo): DefaultTokenInfo => {
@@ -676,6 +689,14 @@ const SwapCard: React.FC = () => {
   }, [swapState.fromToken?.address, swapState.toToken?.address]);
   
   return (
+    <SwapLayout
+      fromToken={swapState.fromToken}
+      toToken={swapState.toToken}
+      getTradingViewSymbol={(token) => {
+        // Return the TradingView symbol for the token
+        // Format: COIN/USD for most tokens on Solana
+        return token?.symbol ? `${token.symbol}USD` : null;
+      }}>
     <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-3xl shadow-md p-3 sm:p-4 md:p-6 w-full max-w-lg mx-auto transition-all duration-300">
       {/* From token input */}
       {/* 1. Responsive view of the navbar */}
@@ -826,7 +847,8 @@ const SwapCard: React.FC = () => {
         walletConnected={wallet.connected}
         hasSufficientBalance={hasSufficientBalance}
       />
-    </div>
+      </div>
+    </SwapLayout>
   );
 };
 export default SwapCard;
