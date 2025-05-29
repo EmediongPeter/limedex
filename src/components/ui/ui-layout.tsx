@@ -290,7 +290,7 @@ export function UiLayout({
         <EnhancedSearchModal />
         <ClusterChecker>
           {/* Add padding top on mobile to account for fixed navbar */}
-          <div className="grow flex flex-col p-4 pt-20 md:pt-4 md:p-8 mx-auto max-w-3xl w-full">
+          <div className="grow flex flex-col p-4 pt-20 md:pt-4 md:p-8 mx-auto max-w-full w-full">
             <Suspense>
               <div className="grow">{children}</div>
             </Suspense>

@@ -5,11 +5,13 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useTheme } from 'next-themes';
 import TradingViewChart from '../chart/TradingViewChart';
 import { TokenInfo } from '@/types/token-info';
+import { formatTradingViewSymbol } from '@/utils/tradingViewUtils';
+import { fetchJupiterTokenData, JupiterTokenData } from '@/services/jupiterApi';
 
 interface SwapLayoutProps {
   children: React.ReactNode; // This will be the SwapCard
-  fromToken?: TokenInfo;
-  toToken?: TokenInfo;
+  fromToken?: TokenInfo | null;
+  toToken?: TokenInfo | null;
   getTradingViewSymbol: (token: TokenInfo) => string | null;
 }
 
@@ -24,111 +26,99 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
   const [showChart, setShowChart] = useState(true); // Default to showing chart
   const [showHistory, setShowHistory] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState<string>('');
-  const [marketStats, setMarketStats] = useState({
-    price: '0.00',
-    change: '0.00%',
-    volume: '$0.00',
-    liquidity: '$0.00',
-    marketCap: '$0.00',
-  });
+  const [isPairInverted, setIsPairInverted] = useState(false);
+  const [isLoadingMarketData, setIsLoadingMarketData] = useState(false);
+  const [tokenData, setTokenData] = useState<JupiterTokenData | null>(null);
   
+  // Handle pair switching
+  const handleSwitchPair = () => {
+    setIsPairInverted(prev => !prev);
+  };
+  
+  // Format the trading view symbol based on the current pair order
   useEffect(() => {
-    if (!toToken) return;
-    const symbol = getTradingViewSymbol(toToken);
-    if (!symbol) return;
-    const timer = setTimeout(() => {
+    if (!fromToken || !toToken) return;
+    
+    const symbol = formatTradingViewSymbol(
+      isPairInverted ? toToken : fromToken,
+      isPairInverted ? fromToken : toToken,
+      'BINANCE',
+      false
+    );
+    
+    if (symbol) {
       setCurrentSymbol(symbol);
+    }
+  }, [fromToken, toToken, isPairInverted]);
+  
+  // Fetch token data from Jupiter API
+  useEffect(() => {
+    const fetchTokenData = async () => {
+      if (!fromToken || !toToken) return;
       
-      // In a real app, this would fetch actual market data
-      // For demo, we're setting mock data
-      setMarketStats({
-        price: toToken.symbol === 'SOL' ? '170.3' : '1.00',
-        change: '-4.57%',
-        volume: '$6.2B',
-        liquidity: '$109M',
-        marketCap: '$89B',
-      });
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [toToken, getTradingViewSymbol]);
+      setIsLoadingMarketData(true);
+      
+      try {
+        // Fetch data for the base token (the one we're viewing price for)
+        const baseToken = isPairInverted ? toToken : fromToken;
+        const quoteToken = isPairInverted ? fromToken : toToken;
+        
+        const data = await fetchJupiterTokenData(baseToken.address, quoteToken.address);
+        setTokenData(data);
+      } catch (error) {
+        console.error('Error fetching token data:', error);
+      } finally {
+        setIsLoadingMarketData(false);
+      }
+    };
+    
+    fetchTokenData();
+  }, [fromToken, toToken, isPairInverted]);
+  
+  // Animation classes for the chart
+  const chartAnimationClasses = showChart 
+    ? 'opacity-100 max-h-[800px] transition-all duration-500 ease-in-out' 
+    : 'opacity-0 max-h-0 overflow-hidden transition-all duration-500 ease-in-out';
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-0 flex flex-col items-center min-h-[80vh]">
+    <div className="w-full max-w-full mx-auto px-4 sm:px-6 md:px-0 flex flex-col items-center min-h-[80vh]">
       {/* Layout row for chart and swap card */}
-      <div className={`w-full flex flex-col-reverse lg:flex-row gap-8 items-stretch justify-center transition-all pb-4 ${showChart && currentSymbol ? '' : 'min-h-[500px]'}`}>
+      <div className={`w-full flex flex-col-reverse lg:flex-row gap-8 items-center justify-center transition-all pb-4 ${showChart && currentSymbol ? '' : 'min-h-[500px]'}`}>
         {/* Chart Section */}
-        {showChart && currentSymbol && (
-          <div className="w-full lg:w-[60%] flex flex-col justify-between">
+        <div className={`w-full lg:w-[60%] flex flex-col justify-between ${chartAnimationClasses}`}>
+          {showChart && currentSymbol && (
             <div className="flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md">
-              {/* Token Pair Header */}
-              <div className="flex w-full items-center justify-between gap-4 overflow-x-auto border-b border-gray-200 dark:border-slate-800 px-4 py-3">
-                <div className="flex items-center gap-x-2">
-                  <div className="hidden -space-x-2 md:flex">
-                    {fromToken?.logoURI && (
-                      <span className="relative z-10">
-                        <img src={fromToken.logoURI} alt={fromToken.symbol} width="28" height="28" 
-                             className="rounded-full object-cover border border-gray-200 dark:border-slate-700" style={{ maxWidth: '28px', maxHeight: '28px' }} />
-                      </span>
-                    )}
-                    {toToken?.logoURI && (
-                      <span className="relative z-0">
-                        <img src={toToken.logoURI} alt={toToken.symbol} width="28" height="28" 
-                             className="rounded-full object-cover border border-gray-200 dark:border-slate-700" style={{ maxWidth: '28px', maxHeight: '28px' }} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-x-1 font-semibold">
-                    <span>{fromToken?.symbol || 'Token'}</span>
-                    <span className="font-semibold text-gray-500">/</span>
-                    <span>{toToken?.symbol || 'Token'}</span>
-                  </div>
-                </div>
-                <div className="flex flex-row gap-x-6">
-                  <div className="flex flex-col gap-y-1 whitespace-nowrap">
-                    <p className="text-xs font-normal text-gray-500 dark:text-gray-400">24h Vol</p>
-                    <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">{marketStats.volume}</p>
-                  </div>
-                  <div className="flex flex-col gap-y-1 whitespace-nowrap">
-                    <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Liquidity</p>
-                    <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">{marketStats.liquidity}</p>
-                  </div>
-                </div>
-              </div>
-              {/* Market Stats Row */}
-              <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 p-3 px-4">
-                <div>
-                  <div className="flex items-center gap-x-1 mb-1 font-semibold">
-                    <span>{marketStats.price}</span>
-                    <span className="text-sm">{toToken?.symbol}</span>
-                  </div>
-                  <div className="flex items-center text-xs font-medium text-red-500">
-                    {marketStats.change}
-                  </div>
-                </div>
-                <div className="flex flex-row gap-x-6">
-                  <div className="flex flex-col gap-y-1 whitespace-nowrap">
-                    <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Mkt Cap</p>
-                    <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">{marketStats.marketCap}</p>
-                  </div>
-                </div>
-              </div>
               {/* TradingView Chart */}
               <div className="relative flex-1 overflow-hidden transition-all" style={{ minHeight: '200px', height: isMobile ? '350px' : '500px' }}>
                 <TradingViewChart
                   symbol={currentSymbol}
                   height="100%"
+                  baseToken={isPairInverted ? toToken : fromToken}
+                  quoteToken={isPairInverted ? fromToken : toToken}
+                  onSwitchPair={handleSwitchPair}
+                  isPairInverted={isPairInverted}
+                  isLoading={isLoadingMarketData}
+                  marketData={{
+                    price: tokenData?.priceUsd,
+                    priceChange24h: tokenData?.priceChange24h,
+                    volume24h: tokenData?.volume24h,
+                    liquidity: tokenData?.liquidity,
+                    mcap: tokenData?.mcap,
+                  }}
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        
         {/* Swap Card Section */}
-        <div className={`flex flex-col w-full ${showChart && currentSymbol ? 'lg:w-[40%]' : 'lg:w-[60%]'} items-center justify-center transition-all`}>
+        <div className={`flex flex-col w-full ${showChart && currentSymbol ? 'lg:w-[40%]' : 'lg:w-[500px]'} items-center justify-center transition-all duration-500`}>
           <div className="w-full max-w-lg mx-auto">
             {children}
           </div>
         </div>
       </div>
+      
       {/* Controls centered below both sections */}
       <div className="flex flex-row items-center justify-center gap-4 mt-4 mb-2">
         <button

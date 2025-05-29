@@ -2,11 +2,27 @@
 
 import React, { useEffect, useRef, memo, useState } from "react";
 import { useTheme } from "next-themes";
+import { formatNumber, formatPercentage } from "@/services/jupiterApi";
+import { TokenInfo } from "@/types/token-info";
+import { DEFAULT_EXCHANGE } from "@/utils/tradingViewUtils";
+import { ArrowRightLeftIcon } from "lucide-react";
 
 interface TradingViewChartProps {
   symbol: string;
   width?: string | number;
   height?: string | number;
+  baseToken?: TokenInfo | null;
+  quoteToken?: TokenInfo | null;
+  onSwitchPair?: () => void;
+  isPairInverted?: boolean;
+  marketData?: {
+    price?: number;
+    priceChange24h?: number;
+    volume24h?: number;
+    liquidity?: number;
+    mcap?: number;
+  };
+  isLoading?: boolean;
 }
 
 /**
@@ -17,6 +33,12 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
   symbol,
   width = "100%",
   height = 400,
+  baseToken,
+  quoteToken,
+  onSwitchPair,
+  isPairInverted = false,
+  marketData,
+  isLoading: externalLoading,
 }) => {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,8 +65,8 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
     }
 
     // Format symbol correctly for TradingView
-    // TradingView expects format like "COINBASE:SOLUSDC"
-    const formattedSymbol = symbol.includes(":") ? symbol : `COINBASE:${symbol}`;
+    // TradingView expects format like "BINANCE:SOLUSDC"
+    const formattedSymbol = symbol.includes(":") ? symbol : `${DEFAULT_EXCHANGE}:${symbol}`;
 
     try {
       // Create and configure script
@@ -65,6 +87,7 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
         locale: "en",
         toolbar_bg: "transparent",
         enable_publishing: false,
+        hide_legend: true,
         hide_top_toolbar: false,
         hide_side_toolbar: false,
         allow_symbol_change: false,
@@ -72,9 +95,9 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
         calendar: false,
         hide_volume: false,
         support_host: "https://www.tradingview.com",
-        studies: [
-          "MASimple@tv-basicstudies"
-        ],
+        studies_overrides: {
+          "volume.visible": false,
+        },
         overrides: {
           "mainSeriesProperties.candleStyle.upColor": "#26a69a",
           "mainSeriesProperties.candleStyle.downColor": "#ef5350",
@@ -85,21 +108,23 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
         },
         disabled_features: [
           "header_symbol_search",
-          "header_settings",
-          "header_compare",
+          "disable_resolution_rebuild",
+          "keep_left_toolbar_visible_on_small_screens",
           "header_undo_redo",
           "timeframes_toolbar",
           "volume_force_overlay",
           "countdown",
           "left_toolbar",
-          "header_indicators",
+          "header_settings",
+          "header_compare",
+          "use_studies_context_menu",
           "header_screenshot",
           "header_fullscreen_button",
           "control_bar",
+          "use_studies_context_menu", // Disable studies/indicators context menu
         ],
         enabled_features: [
           "hide_left_toolbar_by_default",
-          "use_localstorage_for_settings",
           "save_chart_properties_to_local_storage",
         ],
       });
@@ -136,19 +161,132 @@ const TradingViewChart: React.FC<TradingViewChartProps> = ({
   // Error state UI
   if (error) {
     return (
-      <div className="flex items-center justify-center h-80 text-gray-500 bg-gray-100 dark:bg-slate-900 rounded-xl border border-gray-300 dark:border-slate-700">
+      <div className="flex items-center justify-center h-80 text-gray-500 bg-gray-100 dark:bg-slate-900 border border-gray-300 dark:border-slate-700">
         {error}
       </div>
     );
   }
 
+  // Determine if we're in a loading state (either external or internal loading)
+  const isChartLoading = isLoading || (externalLoading ?? false);
+  
   // Main chart UI
   return (
     <div 
       ref={containerRef}
-      style={{ width, height, minHeight: 320 }}
+      style={{ width, height: height || '500px', minHeight: '550px' }}
       className="relative rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden"
     >
+      {/* Chart Header with Market Data */}
+      {(baseToken || quoteToken) && (
+        <div className="flex w-full items-center justify-between gap-4 overflow-x-auto border-b border-gray-200 dark:border-slate-800 px-4 py-3">
+          <div className="flex items-center gap-x-2">
+            <div className="hidden -space-x-2 md:flex">
+              {baseToken?.logoURI && (
+                <span className="relative z-10">
+                  <img 
+                    src={isPairInverted ? quoteToken?.logoURI : baseToken.logoURI} 
+                    alt={isPairInverted ? quoteToken?.symbol : baseToken.symbol} 
+                    width="28" height="28" 
+                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700" 
+                    style={{ maxWidth: '28px', maxHeight: '28px' }} 
+                  />
+                </span>
+              )}
+              {quoteToken?.logoURI && (
+                <span className="relative z-0">
+                  <img 
+                    src={isPairInverted ? baseToken?.logoURI : quoteToken.logoURI} 
+                    alt={isPairInverted ? baseToken?.symbol : quoteToken.symbol} 
+                    width="28" height="28" 
+                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700" 
+                    style={{ maxWidth: '28px', maxHeight: '28px' }} 
+                  />
+                </span>
+              )}
+            </div>
+            <div className="flex gap-x-1 font-semibold">
+              <span>{isPairInverted ? quoteToken?.symbol : baseToken?.symbol || 'Token'}</span>
+              <span className="font-semibold text-gray-500">/</span>
+              <span>{isPairInverted ? baseToken?.symbol : quoteToken?.symbol || 'Token'}</span>
+              
+              {/* Pair Switch Button */}
+              {onSwitchPair && (
+                <button 
+                  onClick={onSwitchPair}
+                  className="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Switch pair order"
+                >
+                  <ArrowRightLeftIcon className="h-4 w-4 text-gray-500" />
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Market Data */}
+          <div className="flex flex-row gap-x-6 overflow-x-auto">
+            {/* Price and Change */}
+            <div>
+              <div className="flex items-center gap-x-1 mb-1 font-semibold">
+                {isChartLoading ? (
+                  <div className="h-5 w-16 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+                ) : (
+                  <>
+                    <span>{marketData?.price ? marketData.price.toFixed(2) : '0.00'}</span>
+                    <span className="text-sm">{(isPairInverted ? baseToken?.symbol : quoteToken?.symbol) || ''}</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center text-xs font-medium">
+                {isChartLoading ? (
+                  <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+                ) : (
+                  <span className={marketData?.priceChange24h && marketData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}>
+                    {marketData?.priceChange24h ? formatPercentage(marketData.priceChange24h) : '0.00%'}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Volume */}
+            <div className="flex flex-col gap-y-1 whitespace-nowrap">
+              <p className="text-xs font-normal text-gray-500 dark:text-gray-400">24h Vol</p>
+              {isChartLoading ? (
+                <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+              ) : (
+                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">
+                  {marketData?.volume24h ? formatNumber(marketData.volume24h) : '$0'}
+                </p>
+              )}
+            </div>
+            
+            {/* Liquidity */}
+            <div className="flex flex-col gap-y-1 whitespace-nowrap">
+              <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Liquidity</p>
+              {isChartLoading ? (
+                <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+              ) : (
+                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">
+                  {marketData?.liquidity ? formatNumber(marketData.liquidity) : '$0'}
+                </p>
+              )}
+            </div>
+            
+            {/* Market Cap */}
+            <div className="flex flex-col gap-y-1 whitespace-nowrap">
+              <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Mkt Cap</p>
+              {isChartLoading ? (
+                <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+              ) : (
+                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">
+                  {marketData?.mcap ? formatNumber(marketData.mcap) : '$0'}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* TradingView requires this exact structure */}
       <div className="tradingview-widget-container h-full w-full" ref={widgetContainerRef}>
         <div className="tradingview-widget-container__widget h-full w-full"></div>
