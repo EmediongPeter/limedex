@@ -791,9 +791,9 @@ const SwapCard = () => {
         </div>
 
         {/* To token input */}
-        <div className="bg-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-charcoal-700">
+        <div className="bg-white dark:bg-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-gray-200 dark:border-charcoal-700 transition-colors duration-200">
           <div className="flex justify-between mb-2">
-            <span className="text-sm text-charcoal-400">
+            <span className="text-sm text-gray-500 dark:text-charcoal-400">
               You Receive
             </span>
           </div>
@@ -804,7 +804,7 @@ const SwapCard = () => {
               ) : (
                 <input
                   type="text"
-                  className="w-full bg-transparent text-2xl sm:text-3xl outline-none text-white placeholder:text-charcoal-400"
+                  className="w-full bg-transparent text-2xl sm:text-3xl outline-none text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-charcoal-400"
                   placeholder="0"
                   value={swapState.swapRate || ""}
                   onChange={(e) => handleToAmountChange(e.target.value)}
