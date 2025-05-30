@@ -111,6 +111,19 @@ body {
   --navbar-height: 60px;
 }
 
+.tradingview-widget-container iframe {
+  display: block;
+  height: 490px;
+  width: 100%;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+@media (max-width: 768px) {
+  .tradingview-widget-container iframe {
+    height: 350px;
+  }
+}
+
 /* Improve touch interactions on mobile */
 @media (max-width: 767px) {
   button, a, input, select {

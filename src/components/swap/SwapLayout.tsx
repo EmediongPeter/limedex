@@ -23,7 +23,17 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
-  const [showChart, setShowChart] = useState(true); // Default to showing chart
+  // Use localStorage to remember chart visibility preference
+  const [showChart, setShowChart] = useState(() => {
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined') {
+      const savedPreference = localStorage.getItem('showChart');
+      // Default to hiding chart if no preference is saved
+      return savedPreference ? savedPreference === 'true' : false;
+    }
+    return false; // Default to hiding chart
+  });
+  
   const [showHistory, setShowHistory] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState<string>('');
   const [isPairInverted, setIsPairInverted] = useState(false);
@@ -33,6 +43,16 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
   // Handle pair switching
   const handleSwitchPair = () => {
     setIsPairInverted(prev => !prev);
+  };
+  
+  // Handle chart visibility toggle with localStorage persistence
+  const toggleChartVisibility = () => {
+    const newVisibility = !showChart;
+    setShowChart(newVisibility);
+    // Save preference to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('showChart', newVisibility.toString());
+    }
   };
   
   // Format the trading view symbol based on the current pair order
@@ -83,7 +103,8 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
   return (
     <div className="w-full max-w-full mx-auto px-4 sm:px-6 md:px-0 flex flex-col items-center min-h-[80vh]">
       {/* Layout row for chart and swap card */}
-      <div className={`w-full flex flex-col-reverse lg:flex-row gap-8 items-center justify-center transition-all pb-4 ${showChart && currentSymbol ? '' : 'min-h-[500px]'}`}>
+      <div className={`w-full flex flex-col-reverse ${showChart && currentSymbol ? 'lg:flex-row lg:justify-between' : 'lg:justify-center'} gap-8 items-center transition-all pb-4`}>
+
         {/* Chart Section */}
         <div className={`w-full lg:w-[60%] flex flex-col justify-between ${chartAnimationClasses}`}>
           {showChart && currentSymbol && (
@@ -112,7 +133,7 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
         </div>
         
         {/* Swap Card Section */}
-        <div className={`flex flex-col w-full ${showChart && currentSymbol ? 'lg:w-[40%]' : 'lg:w-[500px]'} items-center justify-center transition-all duration-500`}>
+        <div className={`flex flex-col w-full mx-auto ${showChart && currentSymbol ? 'lg:w-[40%]' : 'max-w-[500px] mx-auto'} items-center justify-center transition-all duration-500`}>
           <div className="w-full max-w-lg mx-auto">
             {children}
           </div>
@@ -123,7 +144,7 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
       <div className="flex flex-row items-center justify-center gap-4 mt-4 mb-2">
         <button
           type="button"
-          onClick={() => setShowChart(prev => !prev)}
+          onClick={toggleChartVisibility}
           className={`flex items-center gap-1 rounded-full p-2 px-4 text-xs font-medium transition-colors ${showChart 
             ? 'bg-primary/10 text-primary' 
             : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}

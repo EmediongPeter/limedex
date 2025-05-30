@@ -17,7 +17,7 @@ export default function Home() {
         <SwapCard />
         {/* Transaction History Section */}
       <div className="mt-6">
-        <TransactionHistory className="mt-4" />
+        {/* <TransactionHistory className="mt-4" /> */}
       </div>
         <DashboardFeature />
       </div>
