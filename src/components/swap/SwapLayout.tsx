@@ -108,7 +108,7 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
         {/* Chart Section */}
         <div className={`w-full lg:w-[60%] flex flex-col justify-between ${chartAnimationClasses}`}>
           {showChart && currentSymbol && (
-            <div className="flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md">
+            <div className="flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 shadow-md">
               {/* TradingView Chart */}
               <div className="relative flex-1 overflow-hidden transition-all" style={{ minHeight: '200px', height: isMobile ? '350px' : '500px' }}>
                 <TradingViewChart
@@ -146,8 +146,8 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
           type="button"
           onClick={toggleChartVisibility}
           className={`flex items-center gap-1 rounded-full p-2 px-4 text-xs font-medium transition-colors ${showChart 
-            ? 'bg-primary/10 text-primary' 
-            : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+            ? 'bg-primary/10 text-primary dark:text-primary-purple dark:bg-primary-purple/20' 
+            : 'bg-gray-100 dark:bg-charcoal-700 text-gray-700 dark:text-charcoal-300 hover:bg-gray-200 dark:hover:bg-charcoal-600'}`}
         >
           <span>{showChart ? 'Hide Chart' : 'Show Chart'}</span>
           {showChart && (
@@ -161,7 +161,7 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
           type="button"
           disabled
           title="Coming soon!"
-          className="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-slate-800 p-2 px-4 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 opacity-75"
+          className="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-charcoal-700 p-2 px-4 text-xs font-medium text-gray-700 dark:text-charcoal-300 hover:bg-gray-200 dark:hover:bg-charcoal-600 opacity-75"
         >
           <span>Show History</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="13" viewBox="0 0 12 13" fill="none">

@@ -711,7 +711,7 @@ const SwapCard = () => {
             <SlippageSettings />
           </div>
           <div className={`flex ${isMobile ? 'flex-col' : 'justify-between'} mb-2`}>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-gray-500 dark:text-charcoal-400">
               You Pay
             </span>
             {wallet.connected && contextFromToken && (
@@ -741,7 +741,7 @@ const SwapCard = () => {
               />
             </div>
             {contextAmount && parseFloat(contextAmount) > 0 && (
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-right">
+              <div className="text-sm text-gray-500 dark:text-charcoal-400 mt-1 text-right">
                 {getTokenValueInUSD(contextAmount, swapState.fromTokenUsdPrice)}
               </div>
             )}
@@ -749,13 +749,13 @@ const SwapCard = () => {
               <div className={`flex mt-2 ${isMobile ? 'grid grid-cols-2' : 'gap-2'}`}>
                 <button
                   onClick={handleHalfAmount}
-                  className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium mr-2 sm:mr-0"
+                  className="bg-charcoal-700 text-charcoal-300 px-3 py-1.5 rounded-md text-sm hover:bg-charcoal-600 transition-colors duration-200 font-medium mr-2 sm:mr-0"
                 >
                   HALF
                 </button>
                 <button
                   onClick={handleMaxAmount}
-                  className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors duration-200 font-medium"
+                  className="bg-charcoal-700 text-charcoal-300 px-3 py-1.5 rounded-md text-sm hover:bg-charcoal-600 transition-colors duration-200 font-medium"
                 >
                   MAX
                 </button>
@@ -768,7 +768,7 @@ const SwapCard = () => {
         <div className="flex justify-center my-1">
           <button
             onClick={handleSwapTokens}
-            className="w-10 h-10 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center cursor-pointer border-4 border-white dark:border-slate-900 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors duration-200 active:scale-95 touch-manipulation"
+            className="w-10 h-10 bg-charcoal-800 rounded-full flex items-center justify-center cursor-pointer border-4 border-charcoal-900 hover:bg-charcoal-700 transition-colors duration-200 active:scale-95 touch-manipulation"
             aria-label="Swap tokens"
           >
             <svg
@@ -777,7 +777,7 @@ const SwapCard = () => {
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="text-gray-600 dark:text-gray-300"
+              className="text-white"
             >
               <path
                 d="M17 4L17 20M17 20L13 16M17 20L21 16M7 20L7 4M7 4L3 8M7 4L11 8"
@@ -791,9 +791,9 @@ const SwapCard = () => {
         </div>
 
         {/* To token input */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-gray-200 dark:border-slate-700">
+        <div className="bg-charcoal-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-charcoal-700">
           <div className="flex justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-charcoal-400">
               You Receive
             </span>
           </div>
@@ -804,7 +804,7 @@ const SwapCard = () => {
               ) : (
                 <input
                   type="text"
-                  className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
+                  className="w-full bg-transparent text-2xl sm:text-3xl outline-none text-white placeholder:text-charcoal-400"
                   placeholder="0"
                   value={swapState.swapRate || ""}
                   onChange={(e) => handleToAmountChange(e.target.value)}
@@ -817,7 +817,7 @@ const SwapCard = () => {
               />
             </div>
             {swapState.swapRate && parseFloat(swapState.swapRate) > 0 && (
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-right">
+              <div className="text-sm text-gray-500 dark:text-charcoal-400 mt-1 text-right">
                 {getTokenValueInUSD(swapState.swapRate, swapState.toTokenUsdPrice)}
               </div>
             )}

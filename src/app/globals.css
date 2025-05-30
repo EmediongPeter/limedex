@@ -8,6 +8,22 @@
     --light-purple: #c4b5fd;
     --button-hover: #8b5cf6;
     --border-color: #e5e7eb;
+    
+    /* Uniswap-inspired dark mode colors */
+    --charcoal-bg: #0D111C;         /* Main background */
+    --charcoal-card-bg: #131A2A;   /* Card backgrounds */
+    --charcoal-border: #2E3747;    /* Border color */
+    --charcoal-hover: #1E293B;     /* Hover state */
+    --charcoal-text: #A7ABB9;      /* Main text */
+    --charcoal-text-secondary: #6B7280; /* Secondary text */
+  }
+
+  .dark {
+    --bg-primary: var(--charcoal-bg);
+    --bg-secondary: var(--charcoal-card-bg);
+    --border-color: var(--charcoal-border);
+    --text-primary: white;
+    --text-secondary: var(--charcoal-text);
   }
 }
 

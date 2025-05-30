@@ -41,14 +41,14 @@ const TradingViewChart = memo(function TradingViewChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { resolvedTheme: theme } = useTheme();
+  const { theme, resolvedTheme, systemTheme } = useTheme();
   const widgetRef = useRef<HTMLDivElement | null>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
   // State to track if chart should be visible (default true)
   const [showChart, setShowChart] = useState(true);
-
+ 
   // Update dimensions on container resize
   useEffect(() => {
     if (!containerRef.current) return;
@@ -151,34 +151,70 @@ const TradingViewChart = memo(function TradingViewChart({
       script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
       script.type = "text/javascript";
       script.async = true;
-      console.log(dimensions)
+      
       // Widget configuration as JSON string
+      // Custom theme colors with purple-blue accent
+      const isDark = resolvedTheme === "dark";
+      
       script.innerHTML = JSON.stringify({
-        autosize: false,
         width: dimensions.width || '100%',
         height: Math.max(410, dimensions.height || 410),
         symbol: formattedSymbol,
         interval: "15",
         timezone: "Etc/UTC",
-        theme: theme === "dark" ? "dark" : "light",
+        theme: isDark ? "dark" : "light",
         style: "1",
         locale: "en",
-        toolbar_bg: "transparent",
+        toolbar_bg: isDark ? "#0f0f17" : "#f8f9fa",
         hide_legend: true,
         hide_volume: true,
         withdateranges: true,
         hide_side_toolbar: false,
         allow_symbol_change: false,
         save_image: false,
-        studies_overrides: {
-          "volume.visible": false,
-        },
-        overrides: {
-          "mainSeriesProperties.candleStyle.upColor": "#26a69a",
-          "mainSeriesProperties.candleStyle.downColor": "#ef5350",
-          "mainSeriesProperties.candleStyle.wickUpColor": "#26a69a",
-          "mainSeriesProperties.candleStyle.wickDownColor": "#ef5350",
-        },
+        // overrides: {
+        //   // Background and layout colors
+        //   'paneProperties.background': isDark ? '#0f0f17' : '#ffffff',
+        //   'paneProperties.backgroundGradientStartColor': isDark ? '#0f0f17' : '#f8f9fa',
+        //   'paneProperties.backgroundGradientEndColor': isDark ? '#0f0f17' : '#f8f9fa',
+        //   'paneProperties.backgroundType': 'solid',
+        //   'paneProperties.vertGridProperties.color': isDark ? '#1e1e2d' : '#e9ecef',
+        //   'paneProperties.horzGridProperties.color': isDark ? '#1e1e2d' : '#e9ecef',
+        //   'paneProperties.vertGridProperties.style': 1,
+        //   'paneProperties.horzGridProperties.style': 1,
+          
+        //   // Text colors
+        //   'paneProperties.legendProperties.showLegend': true,
+        //   'paneProperties.legendProperties.showSeriesTitle': true,
+        //   'paneProperties.legendProperties.showSeriesOHLC': true,
+        //   'scalesProperties.textColor': isDark ? '#a1a1aa' : '#4b5563',
+        //   'scalesProperties.lineColor': isDark ? '#2d2d3a' : '#e5e7eb',
+          
+        //   // Candle colors
+        //   'mainSeriesProperties.candleStyle.upColor': isDark ? '#8b5cf6' : '#7c3aed',
+        //   'mainSeriesProperties.candleStyle.downColor': isDark ? '#ec4899' : '#db2777',
+        //   'mainSeriesProperties.candleStyle.borderUpColor': isDark ? '#8b5cf6' : '#7c3aed',
+        //   'mainSeriesProperties.candleStyle.borderDownColor': isDark ? '#ec4899' : '#db2777',
+        //   'mainSeriesProperties.candleStyle.wickUpColor': isDark ? '#8b5cf6' : '#7c3aed',
+        //   'mainSeriesProperties.candleStyle.wickDownColor': isDark ? '#ec4899' : '#db2777',
+        //   'mainSeriesProperties.candleStyle.drawWick': true,
+        //   'mainSeriesProperties.candleStyle.drawBorder': true,
+        //   'mainSeriesProperties.candleStyle.borderColor': isDark ? '#2d2d3a' : '#e5e7eb',
+          
+        //   // Volume colors
+        //   'volume.partialFill': true,
+        //   'volume.color': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)',
+        //   'volume.color.0': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)',
+        //   'volume.color.1': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)'
+        // },
+        // studies_overrides: {
+        //   'volume.volume.color.0': isDark ? 'rgba(124, 58, 237, 0.3)' : 'rgba(124, 58, 237, 0.3)',
+        //   'volume.volume.color.1': isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.3)',
+        //   'volume.volume.transparency': 80,
+        //   'volume.volume ma.color': isDark ? '#8b5cf6' : '#7c3aed',
+        //   'volume.volume ma.linewidth': 2,
+        //   'volume.volume ma.visible': true
+        // },
         container_id: "tradingview_chart",
         disabled_features: [
           "header_symbol_search",
@@ -232,7 +268,7 @@ const TradingViewChart = memo(function TradingViewChart({
   // Error state UI
   if (error) {
     return (
-      <div className="flex items-center justify-center h-[550px] sm:h-[490px] text-gray-500 bg-gray-100 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl">
+      <div className="flex items-center justify-center h-[550px] sm:h-[490px] text-gray-500 bg-gray-100 dark:bg-charcoal-900 border border-gray-300 dark:border-charcoal-700 rounded-xl">
         {error}
       </div>
     );
@@ -255,14 +291,14 @@ const TradingViewChart = memo(function TradingViewChart({
         overflow: 'hidden',
         visibility: showChart ? 'visible' : 'hidden',
         border: '1px solid',
-        borderColor: 'rgba(209, 213, 219, 0.5)',
+        borderColor: theme === 'dark' ? 'rgba(46, 55, 71, 0.5)' : 'rgba(209, 213, 219, 0.5)',
         borderRadius: '0.75rem',
       }}
-      className={`relative bg-white dark:bg-slate-900 ${isLoading ? 'opacity-50' : 'opacity-100'}`}
+      className={`relative bg-white dark:bg-charcoal-800 ${isLoading ? 'opacity-50' : 'opacity-100'}`}
     >
       {/* Chart Header with Market Data */}
       {(baseToken || quoteToken) && (
-        <div className="flex w-full items-center justify-between gap-4 overflow-x-auto border-b border-gray-200 dark:border-slate-800 px-4 py-3">
+        <div className="flex w-full items-center justify-between gap-4 overflow-x-auto border-b border-gray-200 dark:border-charcoal-700 px-4 py-3">
           <div className="flex items-center gap-x-2">
             <div className="hidden -space-x-2 md:flex">
               {baseToken?.logoURI && (
@@ -309,13 +345,13 @@ const TradingViewChart = memo(function TradingViewChart({
             {/* Toggle chart visibility button */}
             <button
               onClick={toggleChartVisibility}
-              className="ml-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+              className="ml-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-charcoal-700 transition-colors"
               title={showChart ? "Hide chart" : "Show chart"}
             >
               {showChart ? (
-                <EyeOffIcon className="h-4 w-4 text-gray-500" />
+                <EyeOffIcon className="h-4 w-4 text-gray-500 dark:text-charcoal-400" />
               ) : (
-                <EyeIcon className="h-4 w-4 text-gray-500" />
+                <EyeIcon className="h-4 w-4 text-gray-500 dark:text-charcoal-400" />
               )}
             </button>
           </div>
@@ -328,18 +364,11 @@ const TradingViewChart = memo(function TradingViewChart({
           <div className="flex flex-row gap-x-6 overflow-x-auto w-full">
             <div>
               <div className="flex items-center gap-x-1 mb-1 font-semibold">
-                {isChartLoading ? (
-                  <div className="h-5 w-16 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
-                ) : (
-                  <>
-                    <span>{marketData?.price ? Number(marketData.price).toFixed(2) : '0.00'}</span>
-                    <span className="text-sm">{(isPairInverted ? baseToken?.symbol : quoteToken?.symbol) || ''}</span>
-                  </>
-                )}
+                <span className="text-xs text-gray-500 dark:text-charcoal-400">Price</span>
               </div>
               <div className="flex items-center text-xs font-medium">
                 {isChartLoading ? (
-                  <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+                  <div className="h-4 w-12 bg-gray-200 dark:bg-charcoal-700 animate-pulse rounded"></div>
                 ) : (
                   <span className={marketData?.priceChange24h && Number(marketData.priceChange24h) >= 0 ? 'text-green-500' : 'text-red-500'}>
                     {marketData?.priceChange24h ? formatPercentage(Number(marketData.priceChange24h)) : '0.00%'}
@@ -349,33 +378,33 @@ const TradingViewChart = memo(function TradingViewChart({
             </div>
             
             <div className="flex flex-col gap-y-1 whitespace-nowrap">
-              <p className="text-xs font-normal text-gray-500 dark:text-gray-400">24h Vol</p>
+              <p className="text-xs font-normal text-gray-500 dark:text-charcoal-400">24h Vol</p>
               {isChartLoading ? (
-                <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+                <div className="h-4 w-12 bg-charcoal-200 dark:bg-charcoal-700 animate-pulse rounded"></div>
               ) : (
-                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">
+                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-charcoal-300">
                   {marketData?.volume24h ? formatNumber(Number(marketData.volume24h)) : '$0'}
                 </p>
               )}
             </div>
             
             <div className="flex flex-col gap-y-1 whitespace-nowrap">
-              <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Liquidity</p>
+              <p className="text-xs font-normal text-gray-500 dark:text-charcoal-400">Liquidity</p>
               {isChartLoading ? (
-                <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+                <div className="h-4 w-12 bg-charcoal-200 dark:bg-charcoal-700 animate-pulse rounded"></div>
               ) : (
-                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">
+                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-charcoal-300">
                   {marketData?.liquidity ? formatNumber(Number(marketData.liquidity)) : '$0'}
                 </p>
               )}
             </div>
             
             <div className="flex flex-col gap-y-1 whitespace-nowrap">
-              <p className="text-xs font-normal text-gray-500 dark:text-gray-400">Mkt Cap</p>
+              <p className="text-xs font-normal text-gray-500 dark:text-charcoal-400">Mkt Cap</p>
               {isChartLoading ? (
-                <div className="h-4 w-12 bg-gray-200 dark:bg-slate-700 animate-pulse rounded"></div>
+                <div className="h-4 w-12 bg-charcoal-200 dark:bg-charcoal-700 animate-pulse rounded"></div>
               ) : (
-                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-gray-300">
+                <p className="flex h-[14px] items-center text-sm font-semibold !leading-none text-gray-600 dark:text-charcoal-300">
                   {marketData?.mcap ? formatNumber(Number(marketData.mcap)) : '$0'}
                 </p>
               )}
@@ -411,7 +440,7 @@ const TradingViewChart = memo(function TradingViewChart({
 
       {/* Loading overlay */}
       {isLoading && showChart && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900 bg-opacity-75 dark:bg-opacity-75 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-charcoal-800 bg-opacity-75 dark:bg-opacity-75 z-10">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
