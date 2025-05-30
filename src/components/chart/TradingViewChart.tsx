@@ -44,9 +44,40 @@ const TradingViewChart = memo(function TradingViewChart({
   const { resolvedTheme: theme } = useTheme();
   const widgetRef = useRef<HTMLDivElement | null>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
   // State to track if chart should be visible (default true)
   const [showChart, setShowChart] = useState(true);
+
+  // Update dimensions on container resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        setDimensions({
+          width: Math.floor(width),
+          height: Math.floor(height)
+        });
+      }
+    };
+
+    // Initial update
+    updateDimensions();
+
+    // Use ResizeObserver for efficient resize handling
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    // Cleanup
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [showChart]);
 
   // Load user preference from localStorage on mount
   useEffect(() => {
@@ -60,6 +91,17 @@ const TradingViewChart = memo(function TradingViewChart({
     setShowChart(newVisibility);
     localStorage.setItem('showChart', JSON.stringify(newVisibility));
     if (onToggleChart) onToggleChart(newVisibility);
+    
+    // Small delay to ensure animation completes before unmounting
+    if (!newVisibility) {
+      setTimeout(() => {
+        // Clean up TradingView widget when hiding
+        if (widgetRef.current && widgetRef.current.parentNode) {
+          widgetRef.current.parentNode.removeChild(widgetRef.current);
+          widgetRef.current = null;
+        }
+      }, 300); // Match this with CSS transition duration
+    }
   };
 
   // Load TradingView widget only when chart is visible
@@ -86,14 +128,14 @@ const TradingViewChart = memo(function TradingViewChart({
       // Create container divs for the TradingView widget
       const widgetContainer = document.createElement('div');
       widgetContainer.className = 'tradingview-widget-container';
-      widgetContainer.style.height = '410px';
+      widgetContainer.style.height = `${Math.max(410, dimensions.height || 410)}px`;
       widgetContainer.style.width = '100%';
 
       // Create the actual widget div
       const widget = document.createElement('div');
       widget.id = 'tradingview_chart';
       widget.className = 'tradingview-widget-container__widget';
-      widget.style.height = '410px';
+      widget.style.height = '100%';
       widget.style.width = '100%';
       widget.style.borderBottomLeftRadius = '16px';
       widget.style.borderBottomRightRadius = '16px';
@@ -109,10 +151,12 @@ const TradingViewChart = memo(function TradingViewChart({
       script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
       script.type = "text/javascript";
       script.async = true;
-      
+      console.log(dimensions)
       // Widget configuration as JSON string
       script.innerHTML = JSON.stringify({
-        autosize: true,
+        autosize: false,
+        width: dimensions.width || '100%',
+        height: Math.max(410, dimensions.height || 410),
         symbol: formattedSymbol,
         interval: "15",
         timezone: "Etc/UTC",
@@ -122,7 +166,7 @@ const TradingViewChart = memo(function TradingViewChart({
         toolbar_bg: "transparent",
         hide_legend: true,
         hide_volume: true,
-        hide_top_toolbar: false,
+        withdateranges: true,
         hide_side_toolbar: false,
         allow_symbol_change: false,
         save_image: false,
@@ -200,8 +244,21 @@ const TradingViewChart = memo(function TradingViewChart({
   return (
     <div 
       ref={containerRef}
-      style={{ width, height: height || '500px', minHeight: '550px' }}
-      className="relative rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden"
+      style={{ 
+        height: "100%", 
+        width: "100%",
+        transition: 'all 0.3s ease-in-out',
+        transform: showChart ? 'scaleY(1)' : 'scaleY(0)',
+        transformOrigin: 'top',
+        maxHeight: showChart ? '1000px' : '0',
+        opacity: showChart ? 1 : 0,
+        overflow: 'hidden',
+        visibility: showChart ? 'visible' : 'hidden',
+        border: '1px solid',
+        borderColor: 'rgba(209, 213, 219, 0.5)',
+        borderRadius: '0.75rem',
+      }}
+      className={`relative bg-white dark:bg-slate-900 ${isLoading ? 'opacity-50' : 'opacity-100'}`}
     >
       {/* Chart Header with Market Data */}
       {(baseToken || quoteToken) && (
@@ -331,11 +388,11 @@ const TradingViewChart = memo(function TradingViewChart({
       {showChart && (
         <>
           <div className="tradingview-widget-container h-full w-full">
-            <div className="tradingview-widget-container__widget h-full w-full"></div>
+            <div className="tradingview-widget-container__widget" style={{ height: "calc(100% - 32px)", width: "100%" }}></div>
           </div>
           
           {/* Custom styles for TradingView iframe */}
-          <style jsx global>{`
+          {/* <style jsx global>{`
             .tradingview-widget-container iframe {
               display: block;
               height: 490px;
@@ -348,7 +405,7 @@ const TradingViewChart = memo(function TradingViewChart({
                 height: 350px;
               }
             }
-          `}</style>
+          `}</style> */}
         </>
       )}
 

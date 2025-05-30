@@ -118,7 +118,7 @@ export const SwapLayout: React.FC<SwapLayoutProps> = ({
                   quoteToken={isPairInverted ? fromToken : toToken}
                   onSwitchPair={handleSwitchPair}
                   isPairInverted={isPairInverted}
-                  isLoading={isLoadingMarketData}
+                  externalLoading={isLoadingMarketData}
                   marketData={{
                     price: tokenData?.priceUsd,
                     priceChange24h: tokenData?.priceChange24h,

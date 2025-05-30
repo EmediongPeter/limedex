@@ -111,7 +111,7 @@ body {
   --navbar-height: 60px;
 }
 
-.tradingview-widget-container iframe {
+/* .tradingview-widget-container iframe {
   display: block;
   height: 490px;
   width: 100%;
@@ -122,7 +122,7 @@ body {
   .tradingview-widget-container iframe {
     height: 350px;
   }
-}
+} */
 
 /* Improve touch interactions on mobile */
 @media (max-width: 767px) {
