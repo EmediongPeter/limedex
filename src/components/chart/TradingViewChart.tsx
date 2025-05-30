@@ -45,14 +45,14 @@ const TradingViewChart = memo(function TradingViewChart({
   const widgetRef = useRef<HTMLDivElement | null>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  
+
   // State to track if chart should be visible (default true)
   const [showChart, setShowChart] = useState(true);
- 
+
   // Update dimensions on container resize
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     const updateDimensions = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect();
@@ -91,7 +91,7 @@ const TradingViewChart = memo(function TradingViewChart({
     setShowChart(newVisibility);
     localStorage.setItem('showChart', JSON.stringify(newVisibility));
     if (onToggleChart) onToggleChart(newVisibility);
-    
+
     // Small delay to ensure animation completes before unmounting
     if (!newVisibility) {
       setTimeout(() => {
@@ -139,23 +139,23 @@ const TradingViewChart = memo(function TradingViewChart({
       widget.style.width = '100%';
       widget.style.borderBottomLeftRadius = '16px';
       widget.style.borderBottomRightRadius = '16px';
-      
+
       // Clear container and add new elements
       if (containerRef.current) {
         widgetContainer.appendChild(widget);
         containerRef.current.appendChild(widgetContainer);
       }
-      
+
       // Create and configure script
       const script = document.createElement("script");
       script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
       script.type = "text/javascript";
       script.async = true;
-      
+
       // Widget configuration as JSON string
       // Custom theme colors with purple-blue accent
       const isDark = resolvedTheme === "dark";
-      
+
       script.innerHTML = JSON.stringify({
         width: dimensions.width || '100%',
         height: Math.max(410, dimensions.height || 410),
@@ -182,14 +182,14 @@ const TradingViewChart = memo(function TradingViewChart({
           'paneProperties.horzGridProperties.color': isDark ? '#1e1e2d' : '#e9ecef',
           'paneProperties.vertGridProperties.style': 1,
           'paneProperties.horzGridProperties.style': 1,
-          
+
           // Text colors
           'paneProperties.legendProperties.showLegend': true,
           'paneProperties.legendProperties.showSeriesTitle': true,
           'paneProperties.legendProperties.showSeriesOHLC': true,
           'scalesProperties.textColor': isDark ? '#a1a1aa' : '#4b5563',
           'scalesProperties.lineColor': isDark ? '#2d2d3a' : '#e5e7eb',
-          
+
           // Candle colors
           'mainSeriesProperties.candleStyle.upColor': isDark ? '#8b5cf6' : '#7c3aed',
           'mainSeriesProperties.candleStyle.downColor': isDark ? '#ec4899' : '#db2777',
@@ -200,7 +200,7 @@ const TradingViewChart = memo(function TradingViewChart({
           'mainSeriesProperties.candleStyle.drawWick': true,
           'mainSeriesProperties.candleStyle.drawBorder': true,
           'mainSeriesProperties.candleStyle.borderColor': isDark ? '#2d2d3a' : '#e5e7eb',
-          
+
           // Volume colors
           'volume.partialFill': true,
           'volume.color': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)',
@@ -239,11 +239,11 @@ const TradingViewChart = memo(function TradingViewChart({
       });
 
       widgetContainer.appendChild(script);
-      
+
       // Store references for cleanup
       widgetRef.current = widgetContainer;
       scriptRef.current = script;
-      
+
       setIsLoading(false);
     } catch (err) {
       console.error('Failed to initialize TradingView chart:', err);
@@ -276,12 +276,12 @@ const TradingViewChart = memo(function TradingViewChart({
 
   // Determine if we're in a loading state
   const isChartLoading = isLoading || (externalLoading ?? false);
-  
+
   return (
-    <div 
+    <div
       ref={containerRef}
-      style={{ 
-        height: "100%", 
+      style={{
+        height: "100%",
         width: "100%",
         transition: 'all 0.3s ease-in-out',
         transform: showChart ? 'scaleY(1)' : 'scaleY(0)',
@@ -303,23 +303,23 @@ const TradingViewChart = memo(function TradingViewChart({
             <div className="hidden -space-x-2 md:flex">
               {baseToken?.logoURI && (
                 <span className="relative z-10">
-                  <img 
-                    src={isPairInverted ? quoteToken?.logoURI : baseToken.logoURI} 
-                    alt={isPairInverted ? quoteToken?.symbol : baseToken.symbol} 
-                    width="28" height="28" 
-                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700" 
-                    style={{ maxWidth: '28px', maxHeight: '28px' }} 
+                  <img
+                    src={isPairInverted ? quoteToken?.logoURI : baseToken.logoURI}
+                    alt={isPairInverted ? quoteToken?.symbol : baseToken.symbol}
+                    width="28" height="28"
+                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700"
+                    style={{ maxWidth: '28px', maxHeight: '28px' }}
                   />
                 </span>
               )}
               {quoteToken?.logoURI && (
                 <span className="relative z-0">
-                  <img 
-                    src={isPairInverted ? baseToken?.logoURI : quoteToken.logoURI} 
-                    alt={isPairInverted ? baseToken?.symbol : quoteToken.symbol} 
-                    width="28" height="28" 
-                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700" 
-                    style={{ maxWidth: '28px', maxHeight: '28px' }} 
+                  <img
+                    src={isPairInverted ? baseToken?.logoURI : quoteToken.logoURI}
+                    alt={isPairInverted ? baseToken?.symbol : quoteToken.symbol}
+                    width="28" height="28"
+                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700"
+                    style={{ maxWidth: '28px', maxHeight: '28px' }}
                   />
                 </span>
               )}
@@ -328,9 +328,9 @@ const TradingViewChart = memo(function TradingViewChart({
               <span>{isPairInverted ? quoteToken?.symbol : baseToken?.symbol || 'Token'}</span>
               <span className="font-semibold text-gray-500">/</span>
               <span>{isPairInverted ? baseToken?.symbol : quoteToken?.symbol || 'Token'}</span>
-              
+
               {onSwitchPair && (
-                <button 
+                <button
                   onClick={onSwitchPair}
                   className="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                   title="Switch pair order"
@@ -340,7 +340,7 @@ const TradingViewChart = memo(function TradingViewChart({
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center">
             {/* Toggle chart visibility button */}
             <button
@@ -357,7 +357,7 @@ const TradingViewChart = memo(function TradingViewChart({
           </div>
         </div>
       )}
-      
+
       {/* Market data row - only shown when chart is visible */}
       {showChart && (baseToken || quoteToken) && (
         <div className="flex w-full items-center justify-between gap-4 overflow-x-auto px-4 py-3">
@@ -371,18 +371,17 @@ const TradingViewChart = memo(function TradingViewChart({
                   <div className="h-4 w-12 bg-gray-200 dark:bg-charcoal-700 animate-pulse rounded"></div>
                 ) : (
                   <>
-                  <div className="text-gray-500 dark:text-charcoal-400 text-base text-bold">
-                    {marketData?.price ? formatNumber(Number(marketData.price)) : '$0'} {quoteToken?.symbol} 
-                  </div>
-                  <br /> 
-                  <span className={marketData?.priceChange24h && Number(marketData.priceChange24h) >= 0 ? 'text-green-500' : 'text-red-500'}>
-                    {marketData?.priceChange24h ? formatPercentage(Number(marketData.priceChange24h)) : '0.00%'}
-                  </span>
+                    <div className="text-gray-500 dark:text-charcoal-400 text-base font-bold">
+                      {marketData?.price ? formatNumber(Number(marketData.price)) : '$0'} {quoteToken?.symbol}
+                    </div>
+                    <div className={marketData?.priceChange24h && Number(marketData.priceChange24h) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {marketData?.priceChange24h ? formatPercentage(Number(marketData.priceChange24h)) : '0.00%'}
+                    </div>
                   </>
                 )}
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-y-1 whitespace-nowrap">
               <p className="text-xs font-normal text-gray-500 dark:text-charcoal-400">24h Vol</p>
               {isChartLoading ? (
@@ -393,7 +392,7 @@ const TradingViewChart = memo(function TradingViewChart({
                 </p>
               )}
             </div>
-            
+
             <div className="flex flex-col gap-y-1 whitespace-nowrap">
               <p className="text-xs font-normal text-gray-500 dark:text-charcoal-400">Liquidity</p>
               {isChartLoading ? (
@@ -404,7 +403,7 @@ const TradingViewChart = memo(function TradingViewChart({
                 </p>
               )}
             </div>
-            
+
             <div className="flex flex-col gap-y-1 whitespace-nowrap">
               <p className="text-xs font-normal text-gray-500 dark:text-charcoal-400">Mkt Cap</p>
               {isChartLoading ? (
@@ -418,14 +417,14 @@ const TradingViewChart = memo(function TradingViewChart({
           </div>
         </div>
       )}
-      
+
       {/* TradingView container - only rendered when chart is visible */}
       {showChart && (
         <>
           <div className="tradingview-widget-container h-full w-full">
             <div className="tradingview-widget-container__widget" style={{ height: "calc(100% - 32px)", width: "100%" }}></div>
           </div>
-          
+
           {/* Custom styles for TradingView iframe */}
           {/* <style jsx global>{`
             .tradingview-widget-container iframe {
