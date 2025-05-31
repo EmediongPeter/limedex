@@ -155,7 +155,7 @@ const TradingViewChart = memo(function TradingViewChart({
       // Widget configuration as JSON string
       // Custom theme colors with purple-blue accent
       const isDark = resolvedTheme === "dark";
-
+      
       script.innerHTML = JSON.stringify({
         width: dimensions.width || '100%',
         height: Math.max(410, dimensions.height || 410),
@@ -169,52 +169,8 @@ const TradingViewChart = memo(function TradingViewChart({
         hide_legend: true,
         hide_volume: true,
         withdateranges: true,
-        hide_side_toolbar: false,
         allow_symbol_change: false,
         save_image: false,
-        overrides: {
-          // Background and layout colors
-          'paneProperties.background': isDark ? '#0f0f17' : '#ffffff',
-          'paneProperties.backgroundGradientStartColor': isDark ? '#0f0f17' : '#f8f9fa',
-          'paneProperties.backgroundGradientEndColor': isDark ? '#0f0f17' : '#f8f9fa',
-          'paneProperties.backgroundType': 'solid',
-          'paneProperties.vertGridProperties.color': isDark ? '#1e1e2d' : '#e9ecef',
-          'paneProperties.horzGridProperties.color': isDark ? '#1e1e2d' : '#e9ecef',
-          'paneProperties.vertGridProperties.style': 1,
-          'paneProperties.horzGridProperties.style': 1,
-
-          // Text colors
-          'paneProperties.legendProperties.showLegend': true,
-          'paneProperties.legendProperties.showSeriesTitle': true,
-          'paneProperties.legendProperties.showSeriesOHLC': true,
-          'scalesProperties.textColor': isDark ? '#a1a1aa' : '#4b5563',
-          'scalesProperties.lineColor': isDark ? '#2d2d3a' : '#e5e7eb',
-
-          // Candle colors
-          'mainSeriesProperties.candleStyle.upColor': isDark ? '#8b5cf6' : '#7c3aed',
-          'mainSeriesProperties.candleStyle.downColor': isDark ? '#ec4899' : '#db2777',
-          'mainSeriesProperties.candleStyle.borderUpColor': isDark ? '#8b5cf6' : '#7c3aed',
-          'mainSeriesProperties.candleStyle.borderDownColor': isDark ? '#ec4899' : '#db2777',
-          'mainSeriesProperties.candleStyle.wickUpColor': isDark ? '#8b5cf6' : '#7c3aed',
-          'mainSeriesProperties.candleStyle.wickDownColor': isDark ? '#ec4899' : '#db2777',
-          'mainSeriesProperties.candleStyle.drawWick': true,
-          'mainSeriesProperties.candleStyle.drawBorder': true,
-          'mainSeriesProperties.candleStyle.borderColor': isDark ? '#2d2d3a' : '#e5e7eb',
-
-          // Volume colors
-          'volume.partialFill': true,
-          'volume.color': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)',
-          'volume.color.0': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)',
-          'volume.color.1': isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(124, 58, 237, 0.3)'
-        },
-        studies_overrides: {
-          'volume.volume.color.0': isDark ? 'rgba(124, 58, 237, 0.3)' : 'rgba(124, 58, 237, 0.3)',
-          'volume.volume.color.1': isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.3)',
-          'volume.volume.transparency': 80,
-          'volume.volume ma.color': isDark ? '#8b5cf6' : '#7c3aed',
-          'volume.volume ma.linewidth': 2,
-          'volume.volume ma.visible': true
-        },
         container_id: "tradingview_chart",
         disabled_features: [
           "header_symbol_search",
