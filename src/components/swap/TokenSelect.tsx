@@ -11,8 +11,11 @@ import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { FiExternalLink, FiSearch, FiX, FiCopy, FiCheck, FiChevronLeft } from "react-icons/fi";
 import { useTheme } from "next-themes";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { tokenService } from "@/services/tokenService";
+import Image from "next/image";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+// Default token logo for fallback
+const DEFAULT_TOKEN_LOGO = 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png';
 
 interface TokenWithBalance extends TokenInfo {
   balance?: string;
@@ -35,8 +38,31 @@ const TokenSelector = React.memo(({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [solBalance, setSolBalance] = useState<string>('0');
   const wallet = useWallet();
   const { connection } = useConnection();
+  
+  // Fetch SOL balance when wallet connects or changes
+  useEffect(() => {
+    if (!wallet.publicKey) {
+      setSolBalance('0');
+      return;
+    }
+
+    const fetchSolBalance = async () => {
+      if (!wallet.publicKey) return; // Add this line
+      
+      try {
+        const balance = await connection.getBalance(wallet.publicKey);
+        setSolBalance((balance / LAMPORTS_PER_SOL).toFixed(4));
+      } catch (error) {
+        console.error('Error fetching SOL balance:', error);
+        setSolBalance('0');
+      }
+    };
+
+    fetchSolBalance();
+  }, [wallet.publicKey, connection]);
   const { data: tokenAccounts = [], isLoading: isLoadingTokenAccounts } = useGetTokenAccounts({
     address: wallet.publicKey,
   });
@@ -49,51 +75,37 @@ const TokenSelector = React.memo(({
     debouncedUpdate(searchQuery);
   }, [searchQuery]);
 
-  const { data: tokensResponse = { tokens: [] }, isLoading, error } = useSWR<{ tokens: TokenInfo[] }>(
-    `https://fe-api.jup.ag/api/v1/tokens/search?query=${encodeURIComponent(debouncedQuery)}`,
-    fetcher,
+  // Fetch tokens using the token service
+  const { data: tokens = [], isLoading, error } = useSWR<TokenInfo[]>(
+    ['search-tokens', debouncedQuery],
+    async (key) => {
+      // Extract query from the key array
+      const query = Array.isArray(key) ? key[1] : '';
+      return tokenService.searchTokens(query);
+    },
     {
       revalidateOnFocus: false,
       dedupingInterval: 60000,
     }
   );
 
-  // Extract the tokens array from the response
-  const tokens = tokensResponse.tokens;
-
   // Ensure tokens is always an array
   const safeTokens = Array.isArray(tokens) ? tokens : [];
 
-  // Define types for Jupiter price response
-  interface JupiterPriceResponse {
-    data: {
-      [mintAddress: string]: {
-        id: string;
-        mintSymbol: string;
-        vsToken: string;
-        vsTokenSymbol: string;
-        price: number;
-        timeTaken: number;
-      };
-    };
-    timeTaken: number;
-  }
-
-  // Get token prices for USD values using Jupiter v4 API
-  const { data: tokenPrices, error: pricesError } = useSWR<JupiterPriceResponse>(
-    // Only fetch prices when we have tokens to check
-    safeTokens.length > 0 
-      ? `https://price.jup.ag/v4/price?ids=${safeTokens.map(t => t.address).join(',')}`
-      : null,
-    fetcher,
+  // Get token prices for USD values using token service
+  const { data: tokenPrices, error: pricesError } = useSWR<Record<string, number>>(
+    safeTokens.length > 0 ? ['token-prices', ...safeTokens.map(t => t.address)] : null,
+    async (key) => {
+      // Skip the first element as it's the cache key
+      const addresses = safeTokens.map(t => t.address);
+      return tokenService.getTokenPrices(addresses);
+    },
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000, // 30 seconds
       refreshInterval: 60000,   // 1 minute
       onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
-        // Retry up to 3 times
         if (retryCount >= 3) return;
-        // Retry after 5 seconds
         setTimeout(() => revalidate({ retryCount }), 5000);
       },
     }
@@ -140,13 +152,11 @@ const TokenSelector = React.memo(({
 
           userTokenAddresses.add(mintAddress);
 
-          // Only add tokens with balance
-          if (balance > 0) {
-            tokenBalanceMap.set(mintAddress, {
-              balance: balance.toString(),
-              mint: mintAddress,
-            });
-          }
+          // Add all tokens, even with zero balance
+          tokenBalanceMap.set(mintAddress, {
+            balance: balance.toString(),
+            mint: mintAddress,
+          });
         } catch (error) {
           console.error('Error processing token account:', error);
         }
@@ -154,23 +164,14 @@ const TokenSelector = React.memo(({
     }
     
     // Add native SOL balance if wallet is connected
-    if (wallet.publicKey) {
-      // Get SOL balance
-      connection.getBalance(wallet.publicKey).then(balance => {
-        const solBalance = (balance / LAMPORTS_PER_SOL).toFixed(4);
-        // If balance is positive, add to the map
-        if (parseFloat(solBalance) > 0) {
-          tokenBalanceMap.set(NATIVE_MINT.toString(), {
-            balance: solBalance,
-            mint: NATIVE_MINT.toString(),
-          });
-          userTokenAddresses.add(NATIVE_MINT.toString());
-        }
-      });
+    const publicKey = wallet.publicKey;
+    if (publicKey) {
+      // Always add SOL to user's token addresses
+      userTokenAddresses.add(NATIVE_MINT.toString());
       
       // Explicitly check for native SOL token in the tokens list
       const solToken = enhancedTokens.find(t => t.address === NATIVE_MINT.toString());
-      if (!solToken && !hasSolToken) {
+      if (!solToken) {
         // Add SOL token if it's not in the list
         enhancedTokens.unshift({
           address: NATIVE_MINT.toString(),
@@ -181,16 +182,20 @@ const TokenSelector = React.memo(({
           icon: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
           logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
         });
-        userTokenAddresses.add(NATIVE_MINT.toString());
       }
+      
+      // Add SOL balance to the map from state
+      tokenBalanceMap.set(NATIVE_MINT.toString(), {
+        balance: solBalance,
+        mint: NATIVE_MINT.toString(),
+      });
     }
 
     // Enhance the tokens with balance and price information
     return enhancedTokens.map(token => {
       try {
         const tokenAccount = tokenBalanceMap.get(token.address);
-        const priceInfo = tokenPrices?.data?.[token.address];
-        const usdPrice = priceInfo?.price || 0;
+        const usdPrice = tokenPrices?.[token.address] || 0;
         const balance = tokenAccount?.balance || '0';
         const usdValue = parseFloat(balance) > 0 ? (parseFloat(balance) * usdPrice).toFixed(2) : '0';
         
@@ -211,13 +216,55 @@ const TokenSelector = React.memo(({
         } as TokenWithBalance;
       }
     });
+    // Ensure we always return an array, even in error cases
+    return [];
   }, [safeTokens, wallet.publicKey, tokenAccounts, connection, tokenPrices]);
 
   // Sort and filter tokens: owned tokens first, then the rest
-  const sortedAndFilteredTokens = useMemo(() => {
-    let result = tokensWithBalances;
+  const sortedAndFilteredTokens: TokenWithBalance[] = useMemo(() => {
+    if (!tokensWithBalances?.length) return [];
+
+    // Create a map of all token addresses for quick lookup
+    const tokenAddresses = new Set(tokensWithBalances.map(t => t.address));
+
+    // Find all user token addresses that aren't in the main token list
+    const missingUserTokens = new Set<string>();
+    if (wallet.publicKey) {
+      tokenAccounts?.forEach(account => {
+        try {
+          const mintAddress = account.account?.data?.parsed?.info?.mint;
+          if (mintAddress && !tokenAddresses.has(mintAddress)) {
+            missingUserTokens.add(mintAddress);
+          }
+        } catch (error) {
+          console.error('Error processing token account:', error);
+        }
+      });
+    }
+
+    // Combine existing tokens with missing user tokens
+    const allTokens = [...tokensWithBalances];
+    
+    // Add missing user tokens (these will be simple token objects)
+    missingUserTokens.forEach(address => {
+      if (!allTokens.some(t => t.address === address)) {
+        allTokens.push({
+          address,
+          symbol: address.slice(0, 4) + '...' + address.slice(-4),
+          name: 'Unknown Token',
+          decimals: 9, // Default to 9 decimals for unknown tokens
+          chainId: 101, // Mainnet
+          balance: '0',
+          owned: true,
+          usdValue: '0',
+          usdPrice: 0
+        } as TokenWithBalance);
+      }
+    });
+
 
     // Apply search filtering if query exists
+    let result = allTokens;
     if (debouncedQuery) {
       const query = debouncedQuery.toLowerCase();
       result = result.filter(
@@ -228,31 +275,36 @@ const TokenSelector = React.memo(({
       );
     }
 
-    // Always sort owned tokens first
+    // Sort tokens
     result = [...result].sort((a, b) => {
       // Sort by ownership first (owned tokens come first)
-      if (a.owned && !b.owned) return -1;
-      if (!a.owned && b.owned) return 1;
+      const aOwned = a.owned || false;
+      const bOwned = b.owned || false;
+      
+      if (aOwned && !bOwned) return -1;
+      if (!aOwned && bOwned) return 1;
 
-      // Then sort by balance (higher balances first)
-      if (a.owned && b.owned) {
-        const aBalance = parseFloat(a.balance || "0");
-        const bBalance = parseFloat(b.balance || "0");
-        if (aBalance !== bBalance) return bBalance - aBalance;
+      // For owned tokens, sort by balance and USD value
+      if (aOwned && bOwned) {
+        const aBalance = parseFloat(a.balance || '0');
+        const bBalance = parseFloat(b.balance || '0');
+        
+        // Sort by balance (higher first)
+        if (aBalance > 0 || bBalance > 0) {
+          if (aBalance !== bBalance) return bBalance - aBalance;
+        }
 
-        // If balances are equal, sort by USD value
-        const aUsdValue = parseFloat(a.usdValue || "0");
-        const bUsdValue = parseFloat(b.usdValue || "0");
+        // Then by USD value (higher first)
+        const aUsdValue = parseFloat(a.usdValue || '0');
+        const bUsdValue = parseFloat(b.usdValue || '0');
         if (aUsdValue !== bUsdValue) return bUsdValue - aUsdValue;
       }
 
-      // Market cap or popularity sort could go here
-      
-      // Finally alphabetical sort
+      // Finally, sort by symbol (alphabetical)
       return a.symbol.localeCompare(b.symbol);
     });
 
-    return result;
+    return result; // Add the missing return statement
   }, [tokensWithBalances, debouncedQuery, isInputToken]);
 
   // State for copied address feedback and UI state
@@ -301,13 +353,28 @@ const TokenSelector = React.memo(({
         onClick={() => setIsOpen(true)}
         className="flex items-center space-x-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 min-w-[120px] max-w-[140px]"
       >
-        {currentToken?.icon && (
-          <img
-            src={currentToken.icon}
-            alt={currentToken.symbol}
-            className="w-6 h-6 rounded-full flex-shrink-0"
-          />
-        )}
+        <div className="relative w-6 h-6 rounded-full flex-shrink-0 overflow-hidden">
+          {(currentToken?.icon || currentToken?.logoURI) ? (
+            <Image
+              src={currentToken.icon || currentToken.logoURI || DEFAULT_TOKEN_LOGO}
+              alt={`${currentToken.symbol} logo`}
+              fill
+              className="object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = DEFAULT_TOKEN_LOGO;
+              }}
+              sizes="24px"
+              unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {currentToken?.symbol?.charAt(0)?.toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+        </div>
         <span className="truncate overflow-hidden flex-1">{currentToken ? currentToken.symbol : "Select Token"}</span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
@@ -472,6 +539,7 @@ const TokenItem: React.FC<TokenItemProps> = ({
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  console.log({token})
   return (
     <div 
       className={`flex flex-col w-full p-3 ${isMobile ? 'mb-2' : 'mb-1'} rounded-lg transition-colors cursor-pointer active:scale-[0.99] touch-manipulation
@@ -482,14 +550,20 @@ const TokenItem: React.FC<TokenItemProps> = ({
     >
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center space-x-3">
-          <img
-            src={token.icon || 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'}
-            alt={token.symbol}
-            className={`${isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex-shrink-0`}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png';
-            }}
-          />
+          <div className={`relative ${isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex-shrink-0 overflow-hidden`}>
+            <Image
+              src={token.logoURI || token.icon || DEFAULT_TOKEN_LOGO}
+              alt={`${token.symbol} logo`}
+              fill
+              className="object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = DEFAULT_TOKEN_LOGO;
+              }}
+              sizes={isMobile ? '40px' : '32px'}
+              unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+            />
+          </div>
           <div className="text-left min-w-0 flex-1">
             <div className="font-medium flex items-center flex-wrap">
               <span className="truncate mr-1">{token.symbol}</span>

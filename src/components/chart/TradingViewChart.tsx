@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, memo, useState } from "react";
 import { useTheme } from "next-themes";
 import { TokenInfo } from '@/types/token-info';
+import Image from 'next/image';
 import { formatNumber, formatPercentage } from '@/services/jupiterApi';
 import { DEFAULT_EXCHANGE } from "@/utils/tradingViewUtils";
 import { ArrowRightLeftIcon, EyeIcon, EyeOffIcon } from "lucide-react";
@@ -259,24 +260,38 @@ const TradingViewChart = memo(function TradingViewChart({
             <div className="hidden -space-x-2 md:flex">
               {baseToken?.logoURI && (
                 <span className="relative z-10">
-                  <img
-                    src={isPairInverted ? quoteToken?.logoURI : baseToken.logoURI}
-                    alt={isPairInverted ? quoteToken?.symbol : baseToken.symbol}
-                    width="28" height="28"
-                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700"
-                    style={{ maxWidth: '28px', maxHeight: '28px' }}
-                  />
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-slate-700">
+                    <Image
+                      src={isPairInverted ? quoteToken?.logoURI || '/fallback-token-icon.png' : baseToken.logoURI || '/fallback-token-icon.png'}
+                      alt={`${isPairInverted ? quoteToken?.symbol : baseToken.symbol} logo`}
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/fallback-token-icon.png';
+                      }}
+                      sizes="28px"
+                      unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+                    />
+                  </div>
                 </span>
               )}
               {quoteToken?.logoURI && (
                 <span className="relative z-0">
-                  <img
-                    src={isPairInverted ? baseToken?.logoURI : quoteToken.logoURI}
-                    alt={isPairInverted ? baseToken?.symbol : quoteToken.symbol}
-                    width="28" height="28"
-                    className="rounded-full object-cover border border-gray-200 dark:border-slate-700"
-                    style={{ maxWidth: '28px', maxHeight: '28px' }}
-                  />
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-slate-700">
+                    <Image
+                      src={isPairInverted ? baseToken?.logoURI || '/fallback-token-icon.png' : quoteToken.logoURI || '/fallback-token-icon.png'}
+                      alt={`${isPairInverted ? baseToken?.symbol : quoteToken.symbol} logo`}
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/fallback-token-icon.png';
+                      }}
+                      sizes="28px"
+                      unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+                    />
+                  </div>
                 </span>
               )}
             </div>
@@ -285,7 +300,7 @@ const TradingViewChart = memo(function TradingViewChart({
               <span className="font-semibold text-gray-500">/</span>
               <span>{isPairInverted ? baseToken?.symbol : quoteToken?.symbol || 'Token'}</span>
 
-              {onSwitchPair && (
+              {/* {onSwitchPair && (
                 <button
                   onClick={onSwitchPair}
                   className="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
@@ -293,13 +308,13 @@ const TradingViewChart = memo(function TradingViewChart({
                 >
                   <ArrowRightLeftIcon className="h-4 w-4 text-gray-500" />
                 </button>
-              )}
+              )} */}
             </div>
           </div>
 
           <div className="flex items-center">
             {/* Toggle chart visibility button */}
-            <button
+            {/* <button
               onClick={toggleChartVisibility}
               className="ml-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-charcoal-700 transition-colors"
               title={showChart ? "Hide chart" : "Show chart"}
@@ -309,7 +324,7 @@ const TradingViewChart = memo(function TradingViewChart({
               ) : (
                 <EyeIcon className="h-4 w-4 text-gray-500 dark:text-charcoal-400" />
               )}
-            </button>
+            </button> */}
           </div>
         </div>
       )}

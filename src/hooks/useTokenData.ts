@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 import { TokenInfo } from '@/types/token-info';
 import { debounce } from 'lodash';
+import { tokenService } from '@/services/tokenService';
 
 // Add lodash module declaration if @types/lodash is not installed
 declare module 'lodash' {
@@ -12,31 +13,6 @@ declare module 'lodash' {
     wait?: number,
     options?: { leading?: boolean; trailing?: boolean }
   ): T & { cancel(): void };
-}
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-interface TokensResponse {
-  tokens: TokenInfo[];
-}
-
-interface TrendingTokenResponse {
-  id: string;
-  name: string;
-  symbol: string;
-  icon: string;
-  decimals: number;
-  usdPrice: number;
-  stats24h: {
-    priceChange: number;
-    holderChange: number;
-    liquidityChange: number;
-    buyVolume: number;
-    sellVolume: number;
-    numBuys: number;
-    numSells: number;
-    numTraders: number;
-  };
 }
 
 export function useTokenData(query?: string) {
@@ -60,11 +36,13 @@ export function useTokenData(query?: string) {
   }, [query, debounceFn]);
 
   // Fetch search results
-  const { data: searchResults, error: searchError } = useSWR<TokensResponse>(
-    debouncedQuery
-      ? `https://fe-api.jup.ag/api/v1/tokens/search?query=${encodeURIComponent(debouncedQuery)}`
-      : null,
-    fetcher,
+  const { data: tokens, error: searchError, isLoading: isLoadingSearch } = useSWR<TokenInfo[]>(
+    debouncedQuery ? ['search-tokens', debouncedQuery] : null,
+    async (key) => {
+      // Extract query from the key array
+      const query = Array.isArray(key) ? key[1] : '';
+      return tokenService.searchTokens(query);
+    },
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
@@ -73,9 +51,11 @@ export function useTokenData(query?: string) {
   );
 
   // Fetch top trending tokens by 24h volume
-  const { data: trendingTokensData, error: trendingTokensError } = useSWR<TrendingTokenResponse[]>(
-    'https://datapi.jup.ag/v1/assets/toptrending/24h',
-    fetcher,
+  const { data: topTokensByVolume, error: trendingTokensError, isLoading: isLoadingTrending } = useSWR<TokenInfo[]>(
+    'trending-tokens',
+    async () => {
+      return tokenService.getTrendingTokens();
+    },
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
@@ -83,28 +63,10 @@ export function useTokenData(query?: string) {
     }
   );
 
-  // Process trending tokens data
-  const topTokensByVolume = trendingTokensData
-    ? trendingTokensData
-        .map((tokenData) => ({
-          symbol: tokenData.symbol,
-          name: tokenData.name,
-          address: tokenData.id,
-          logoURI: tokenData.icon || `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${tokenData.id}/logo.png`,
-          volumeUsd: (tokenData.stats24h.buyVolume + tokenData.stats24h.sellVolume).toString(),
-          priceChangePercentage: tokenData.stats24h.priceChange,
-          price: tokenData.usdPrice,
-          decimals: tokenData.decimals,
-          chainId: 101, // Solana mainnet chain ID
-        }))
-        .sort((a, b) => parseFloat(b.volumeUsd) - parseFloat(a.volumeUsd))
-        .slice(0, 10)
-    : [];
-
   return {
-    tokens: searchResults?.tokens || [],
-    topTokensByVolume,
-    isLoading: (!searchResults && !searchError && debouncedQuery !== '') || (!trendingTokensData && !trendingTokensError),
+    tokens: tokens || [],
+    topTokensByVolume: topTokensByVolume || [],
+    isLoading: (isLoadingSearch && debouncedQuery !== '') || isLoadingTrending,
     isError: !!searchError || !!trendingTokensError,
   };
 }

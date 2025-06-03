@@ -275,7 +275,7 @@ export function UiLayout({
             
             {/* Centered search button */}
             <div className="flex justify-center mx-auto">
-              <SearchButton />
+              {/* <SearchButton /> */}
             </div>
             
             <div className="flex-none space-x-2">
@@ -287,7 +287,7 @@ export function UiLayout({
 
         <Toaster position="bottom-right" />
         <AccountChecker />
-        <EnhancedSearchModal />
+        {/* <EnhancedSearchModal /> */}
         <ClusterChecker>
           {/* Add padding top on mobile to account for fixed navbar */}
           <div className="grow flex flex-col p-4 pt-20 md:pt-4 md:p-8 mx-auto max-w-full w-full">

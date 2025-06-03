@@ -1,6 +1,9 @@
 // components/SearchTokenModal.tsx
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { PublicKey } from '@solana/web3.js';
+import Image from 'next/image';
 
 export interface TokenInfo {
   address: string;
@@ -75,14 +78,28 @@ export const TokenSearchModal = ({
                   onClose();
                 }}
               >
-                {token.logoURI && (
-                  <img 
-                    src={token.logoURI} 
-                    alt={token.symbol}
-                    className="w-6 h-6 rounded-full mr-2"
-                    loading="lazy"
-                  />
-                )}
+                <div className="relative w-6 h-6 rounded-full mr-2 overflow-hidden flex-shrink-0">
+                  {token.logoURI ? (
+                    <Image
+                      src={token.logoURI}
+                      alt={`${token.symbol} logo`}
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/fallback-token-icon.png';
+                      }}
+                      sizes="24px"
+                      unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {token.symbol?.charAt(0)?.toUpperCase() || '?'}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div className="text-left">
                   <div className="font-medium text-white">{token.symbol}</div>
                   <div className="text-sm text-slate-400">{token.name}</div>

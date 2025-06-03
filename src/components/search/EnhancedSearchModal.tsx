@@ -6,6 +6,7 @@ import { useTokenData } from '@/hooks/useTokenData';
 import useClickOutside from '@/hooks/useClickOutside';
 import { TokenInfo } from '@/types/token-info';
 import { useTheme } from 'next-themes';
+import Image from 'next/image';
 
 export function EnhancedSearchModal() {
   const {
@@ -195,17 +196,20 @@ function TokenItem({ token, onSelect, showVolume = false }: TokenItemProps) {
       onClick={() => onSelect(token)}
     >
       <div className="flex items-center">
-        <img
-          src={token.logoURI || '/fallback-token-icon.png'}
-          alt={token.symbol}
-          className="w-10 h-10 rounded-full mr-3"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/fallback-token-icon.png';
-          }}
-          loading="lazy"
-          width={40}
-          height={40}
-        />
+        <div className="relative w-10 h-10 rounded-full mr-3 overflow-hidden">
+          <Image
+            src={token.logoURI || '/fallback-token-icon.png'}
+            alt={`${token.symbol} logo`}
+            fill
+            className="object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/fallback-token-icon.png';
+            }}
+            sizes="40px"
+            unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+          />
+        </div>
         <div>
           <div className="font-medium text-left">{token.symbol}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400 text-left truncate max-w-[150px]">
