@@ -420,6 +420,19 @@ const TradingViewChart = memo(function TradingViewChart({
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
+
+      {showChart && (
+      <div className="tradingview-widget-copyright text-xs text-center py-2">
+        <a
+          href="https://www.tradingview.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Charts provided by TradingView
+        </a>
+      </div>
+    )}
     </div>
   );
 });
