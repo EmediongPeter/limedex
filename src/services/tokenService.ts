@@ -1,6 +1,6 @@
-import { TokenInfo } from '@/types/token-info';
+import { TokenInfo } from "@/types/token-info";
 
-const API_BASE_URL = 'https://datapi.jup.ag/v1';
+const API_BASE_URL = "https://datapi.jup.ag/v1";
 
 interface ApiToken {
   id: string;
@@ -26,8 +26,9 @@ function mapToTokenInfo(token: ApiToken): TokenInfo {
     logoURI: token.icon,
     price: token.usdPrice,
     priceChangePercentage: token.stats24h?.priceChange,
-    volumeUsd: token.stats24h ? 
-      (token.stats24h.buyVolume + token.stats24h.sellVolume).toString() : '0',
+    volumeUsd: token.stats24h
+      ? (token.stats24h.buyVolume + token.stats24h.sellVolume).toString()
+      : "0",
   };
 }
 
@@ -35,12 +36,14 @@ export const tokenService = {
   async searchTokens(query: string): Promise<TokenInfo[]> {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/assets/search?query=${encodeURIComponent(query)}&sortBy=verified`
+        `${API_BASE_URL}/assets/search?query=${encodeURIComponent(
+          query
+        )}&sortBy=verified`
       );
       const data = await response.json();
       return Array.isArray(data) ? data.map(mapToTokenInfo) : [];
     } catch (error) {
-      console.error('Error searching tokens:', error);
+      console.error("Error searching tokens:", error);
       return [];
     }
   },
@@ -51,20 +54,25 @@ export const tokenService = {
       const data = await response.json();
       return Array.isArray(data) ? data.map(mapToTokenInfo) : [];
     } catch (error) {
-      console.error('Error fetching trending tokens:', error);
+      console.error("Error fetching trending tokens:", error);
       return [];
     }
   },
 
-  async getTokenPrices(tokenAddresses: string[]): Promise<Record<string, number>> {
+  async getTokenPrices(
+    tokenAddresses: string[]
+  ): Promise<Record<string, number>> {
     if (tokenAddresses.length === 0) return {};
-    
+
+    console.log("Fetching prices for tokens: ", tokenAddresses);
     try {
       const response = await fetch(
-        `https://price.jup.ag/v4/price?ids=${tokenAddresses.join(',')}`
+        `https://lite-api.jup.ag/price/v3?ids=${tokenAddresses.join(",")}`
       );
       const data = await response.json();
-      
+
+      console.log("getTokenPrices(): ", data);
+
       // Map the response to a simple address -> price mapping
       const prices: Record<string, number> = {};
       if (data?.data) {
@@ -72,11 +80,11 @@ export const tokenService = {
           prices[address] = (priceData as any)?.price || 0;
         });
       }
-      
+
       return prices;
     } catch (error) {
-      console.error('Error fetching token prices:', error);
+      console.error("Error fetching token prices:", error);
       return {};
     }
-  }
+  },
 };

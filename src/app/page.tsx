@@ -11,7 +11,7 @@ export default function Home() {
       <FloatingElements />
       {/* <Navbar /> */}
       
-      <div className="flex flex-col items-center px-6 py-10 text-center">
+      <div className="flex flex-col items-center text-center pt-5">
         <h1 className="text-4xl font-bold mb-2">Swap anytime,</h1>
         <h1 className="text-4xl font-bold mb-10">anywhere.</h1>
         <SwapCard />

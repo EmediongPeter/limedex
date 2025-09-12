@@ -48,16 +48,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ReactQueryProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ClusterProvider>
+          <ThemeProvider attribute="class" defaultTheme="light">
               <SolanaProvider>
                 <AppContextProvider>
                   <SettingsProvider>
+                    
                     <UiLayout links={links}>{children}</UiLayout>
                   </SettingsProvider>
                 </AppContextProvider>
               </SolanaProvider>
-            </ClusterProvider>
           </ThemeProvider>
         </ReactQueryProvider>
       </body>

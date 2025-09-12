@@ -21,13 +21,13 @@ export function TokenSearchModal({
   setSearchQuery: (query: string) => void;
 }) {
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   // Use our custom hook to handle clicks outside the modal
   useClickOutside(modalRef, onClose);
-  
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-16 sm:pt-24 bg-black bg-opacity-50 backdrop-blur-sm">
-      <div 
+      <div
         ref={modalRef}
         className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl mx-4 overflow-hidden shadow-xl"
       >
@@ -60,15 +60,19 @@ export function TokenSearchModal({
             />
           </div>
         </div>
-        
+
         {/* Search content */}
         <div className="p-4 max-h-[65vh] overflow-y-auto">
           {isLoading ? (
             <LoadingSkeleton />
           ) : tokens.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-500 dark:text-gray-400">No tokens found</div>
-              <p className="mt-1 text-sm text-gray-400">Try a different search term</p>
+              <div className="text-gray-500 dark:text-gray-400">
+                No tokens found
+              </div>
+              <p className="mt-1 text-sm text-gray-400">
+                Try a different search term
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -115,25 +119,28 @@ function TokenItem({
       <div className="flex items-center">
         <div className="relative w-10 h-10 rounded-full mr-3 overflow-hidden">
           <Image
-            src={token.logoURI || '/fallback-token-icon.png'}
+            src={token.logoURI || "/fallback-token-icon.png"}
             alt={`${token.symbol} logo`}
             fill
             className="object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = '/fallback-token-icon.png';
+              target.src = "/fallback-token-icon.png";
             }}
             sizes="40px"
-            unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+            unoptimized={!process.env.NEXT_PRIVATE_IMAGE_OPTIMIZATION}
           />
         </div>
         <div className="text-left">
-          <div className="font-medium text-gray-900 dark:text-white">{token.symbol}</div>
+          <div className="font-medium text-gray-900 dark:text-white">
+            {token.symbol}
+          </div>
           <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
             {token.name}
             {token.address && (
               <span className="ml-2 text-xs opacity-70">
-                {token.address.substring(0, 4)}...{token.address.substring(token.address.length - 4)}
+                {token.address.substring(0, 4)}...
+                {token.address.substring(token.address.length - 4)}
               </span>
             )}
           </div>

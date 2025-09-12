@@ -18,6 +18,7 @@ import { SearchButton } from "../search/SearchButton";
 import { EnhancedSearchModal } from "../search/EnhancedSearchModal";
 import axios from "axios";
 import { useSearchContext } from "@/contexts/SearchContext";
+import { Search } from "lucide-react";
 
 export function UiLayout({
   children,
@@ -29,70 +30,100 @@ export function UiLayout({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { theme, resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === 'dark' || theme === 'dark';
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark" || theme === "dark";
   const { openSearch } = useSearchContext();
-  
+
   // Close sidebar when path changes (navigation occurs)
   useEffect(() => {
     setSidebarOpen(false);
+    setTheme("light")
   }, [pathname]);
-  
+
   // Prevent body scroll when sidebar is open
   useEffect(() => {
     if (sidebarOpen && isMobile) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [sidebarOpen, isMobile]);
-  
+
   return (
     <>
       {/* Mobile Sidebar - Completely outside the main component tree for proper z-index */}
       {isMobile && sidebarOpen && (
         <div className="fixed inset-0 z-[9999] overflow-hidden">
           {/* Backdrop with animation */}
-          <div 
-            className={`fixed inset-0 bg-black transition-opacity duration-300 ${sidebarOpen ? 'opacity-50' : 'opacity-0'}`}
+          <div
+            className={`fixed inset-0 bg-black transition-opacity duration-300 ${
+              sidebarOpen ? "opacity-50" : "opacity-0"
+            }`}
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
-          
+
           {/* Sidebar panel */}
-          <div 
-            className={`fixed top-0 left-0 h-full w-4/5 max-w-xs ${isDarkMode ? 'bg-gray-900' : 'bg-white'} 
-            shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          <div
+            className={`fixed top-0 left-0 h-full w-4/5 max-w-xs ${
+              isDarkMode ? "bg-gray-900" : "bg-white"
+            } 
+            shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="sidebar-title"
           >
             {/* Header */}
-            <div className={`px-4 py-3 flex items-center justify-between border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-              <h2 id="sidebar-title" className="text-base font-semibold">Menu</h2>
-              <button 
+            <div
+              className={`px-4 py-3 flex items-center justify-between border-b ${
+                isDarkMode ? "border-gray-800" : "border-gray-200"
+              }`}
+            >
+              <h2 id="sidebar-title" className="text-base font-semibold">
+                Menu
+              </h2>
+              <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all"
                 aria-label="Close menu"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
-            
+
             {/* Menu content */}
             <div className="flex-1 overflow-y-auto py-2">
               <ul className="menu menu-sm p-2 w-full">
                 {links.map(({ label, path }) => (
                   <li key={path} className="mb-1">
                     <Link
-                      className={`rounded-lg px-3 py-2.5 text-sm ${pathname.startsWith(path) 
-                        ? `${isDarkMode ? 'bg-primary/20 text-primary' : 'bg-primary/10 text-primary'}` 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'} 
+                      className={`rounded-lg px-3 py-2.5 text-sm ${
+                        (pathname?.startsWith(path) ?? false)
+                          ? `${
+                              isDarkMode
+                                ? "bg-primary/20 text-primary"
+                                : "bg-primary/10 text-primary"
+                            }`
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      } 
                         transition-colors`}
                       href={path}
                     >
@@ -101,10 +132,12 @@ export function UiLayout({
                   </li>
                 ))}
               </ul>
-              
+
               {/* Search section */}
               <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-800">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">Search</div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">
+                  Search
+                </div>
                 <div className="mb-4">
                   <button
                     onClick={() => {
@@ -130,9 +163,11 @@ export function UiLayout({
                     <span>Search tokens</span>
                   </button>
                 </div>
-                
+
                 {/* Wallet section */}
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">Wallet</div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-1 mb-2">
+                  Wallet
+                </div>
                 <div className="px-1">
                   <WalletButton />
                 </div>
@@ -142,7 +177,7 @@ export function UiLayout({
         </div>
       )}
 
-      <div className="h-full flex flex-col justify-between items-center md:px-6 py-4 relative">
+      <div className="h-full flex flex-col justify-between items-center md:px-6 relative">
         {/* Mobile navbar (fixed position) */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-40 px-3 py-2 bg-base-300/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm">
           <div className="flex items-center justify-between w-full">
@@ -169,7 +204,7 @@ export function UiLayout({
                   />
                 </svg>
               </button>
-              
+
               {/* Logo */}
               <Link href="/" className="flex items-center ml-1">
                 <div className="flex items-center font-semibold text-lg text-primary-purple">
@@ -195,31 +230,18 @@ export function UiLayout({
                 </div>
               </Link>
             </div>
-            
+
             {/* Center: Search bar */}
-            <div className="flex-1 max-w-[180px] mx-2">
-              <button
-                onClick={openSearch}
-                className="w-full flex items-center px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400"
+            <div className="flex items-center flex-1 justify-end flex-shrink-0">
+              {/* <button
+              onClick={openSearch}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400"
+              style={{ minWidth: 40 }}
               >
-                <svg
-                  className="w-3.5 h-3.5 mr-2 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <span className="truncate">Search tokens</span>
-              </button>
+              <Search className="w-5 h-5 text-muted-foreground" />
+              </button> */}
             </div>
-            
+
             {/* Right side: Wallet button */}
             <div className="flex-shrink-0 transform scale-[0.6] scale-y-[0.7]">
               <WalletButton compact={true} />
@@ -260,7 +282,7 @@ export function UiLayout({
                   <li key={path}>
                     <Link
                       className={`px-3 py-2 rounded-lg transition-colors ${
-                        pathname.startsWith(path)
+                        (pathname?.startsWith(path) ?? false)
                           ? "bg-primary-purple text-white"
                           : "hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
@@ -272,12 +294,12 @@ export function UiLayout({
                 ))}
               </ul>
             </div>
-            
+
             {/* Centered search button */}
             <div className="flex justify-center mx-auto">
               {/* <SearchButton /> */}
             </div>
-            
+
             <div className="flex-none space-x-2">
               <WalletButton />
               {/* <ClusterUiSelect /> */}
@@ -286,104 +308,29 @@ export function UiLayout({
         </div>
 
         <Toaster position="bottom-right" />
-        <AccountChecker />
         {/* <EnhancedSearchModal /> */}
-        <ClusterChecker>
-          {/* Add padding top on mobile to account for fixed navbar */}
-          <div className="grow flex flex-col p-4 pt-20 md:pt-4 md:p-8 mx-auto max-w-full w-full">
-            <Suspense>
-              <div className="grow">{children}</div>
-            </Suspense>
-            <Toaster position="bottom-left" />
-          </div>
-        </ClusterChecker>
-        <div className="hidden">
-        <li>
-          Find a way to create my own personalized UI for the modal of wallet
-          connections like the one on uniswap but for now let it be there
-        </li>
-        <ul>
-          <li>
-            ✅✅✅THE MAIN FUNCTIONALITY, THE SWAP FUNCTIONALITY VIA API AND THE
-            SMART CONTRACT
-          </li>
-          <li>
-            How to pass the trade to jupiter's onchain swap instruction in my
-            smart contract + using Typescript for Jupiter to execute the swap
-            across DEXs in solana after I might have added fees, validate swaps,
-            or automate executions. And also, can I add the fee via typescript
-            in order to reduce compute fee on the Solana blockchain
-          </li>
-          <li>
-            can I Compute the best swap route from typescript and send it to
-            typescript and Deduct the 0.15% fee before executing the swap before
-            sending it to my smart contract to do the swap. If yes how
-          </li>
-          <ol>
-            <strong>Guideline of what my Anchor smart contract will be</strong>
-            Receive swap instructions from users. <br />
-            Compute the best swap route using Jupiter. <br />
-            Deduct a 0.15% fee before executing the swap. <br />
-            Forward the swap transaction to Jupiter’s on-chain program. <br />
-            Send the swapped tokens to the user after deducting fees. <br />
-            <strong>2. Steps to Implement the Smart Contract</strong>
-            Set up your Anchor project Define accounts and state Create a
-            function to handle the swap Integrate with Jupiter's swap
-            instruction Implement fee deduction Test and deploy the contract
-          </ol>
-        </ul>
-        <li>
-          Add an api functionality to get all the tokens from solana, including
-          their current price and other info like address, etc
-        </li>
-        <li>
-          ✅Add a functionality to calculate how much the token selected is in
-          Dollars
-        </li>
-        <li>
-          ✅✅Add a functionality to calculate the conversion rate of the token
-          to be bought and the token to be sold for example 50ETH ---===---
-          96132.2USDT
-        </li>
-        <li>
-          ✅Add a functionality where when the user clicks the tokens to be
-          swapped, it reflects on the Url path
-        </li>
-        <li>
-          ✅✅Add a functionality where the commission fee is calculated once
-          the user clicks on the token swaps as it is shown in jupiter
-        </li>
-        <li>
-          ✅✅Add a functionality where the the place of connect wallet is shown
-          insufficient balance if the amount the user wants to buy isn't
-          sufficient
-        </li>
-        <li>
-          Add a functionality where tokens can be searched by the user on the
-          solana blockchain
-        </li>
-        <li>
-          ✅Add a modal view of the wallets just like Uniswaps own of the 5
-          wallets in Solana. Remember to add the dark blur background for the
-          modal view
-        </li>
-        <li>Add a dark mode functionality of the web page for the user</li>
-      </div>
-      <footer className="footer footer-center p-4 bg-base-300 text-base-content hidden">
-        <aside className="text-left text-lg flex justify-start">
-          <p>
-            Generated by{" "}
-            <a
-              className="link hover:text-white"
-              href="https://github.com/solana-developers/create-solana-dapp"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              create-solana-dapp
-            </a>
-          </p>
-        </aside>
-      </footer>
+        {/* Add padding top on mobile to account for fixed navbar */}
+        <div className="grow flex flex-col md:p-4 mx-auto max-w-full w-full">
+          <Suspense>
+            <div className="grow">{children}</div>
+          </Suspense>
+          <Toaster position="bottom-left" />
+        </div>
+        <footer className="footer footer-center p-4 bg-base-300 text-base-content hidden">
+          <aside className="text-left text-lg flex justify-start">
+            <p>
+              Generated by{" "}
+              <a
+                className="link hover:text-white"
+                href="https://github.com/solana-developers/create-solana-dapp"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                create-solana-dapp
+              </a>
+            </p>
+          </aside>
+        </footer>
       </div>
     </>
   );
@@ -520,10 +467,9 @@ export function useNotificationToast() {
       {
         duration: 60000, // 60,000 milliseconds = 1 minute
         // Other options may go here depending on your toast library
-        id: 'transaction-loading'
+        id: "transaction-loading",
       }
     );
-    
   };
 }
 /**

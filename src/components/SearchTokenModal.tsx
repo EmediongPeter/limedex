@@ -1,9 +1,9 @@
 // components/SearchTokenModal.tsx
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { PublicKey } from '@solana/web3.js';
-import Image from 'next/image';
+import { useState, useEffect, useCallback } from "react";
+import { PublicKey } from "@solana/web3.js";
+import Image from "next/image";
 
 export interface TokenInfo {
   address: string;
@@ -14,14 +14,14 @@ export interface TokenInfo {
   logoURI?: string;
 }
 
-export const TokenSearchModal = ({ 
+export const TokenSearchModal = ({
   onSelect,
-  onClose
+  onClose,
 }: {
   onSelect: (token: TokenInfo) => void;
   onClose: () => void;
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,12 +30,14 @@ export const TokenSearchModal = ({
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://token.jup.ag/strict${query ? `?search=${encodeURIComponent(query)}` : ''}`
+        `https://token.jup.ag/strict${
+          query ? `?search=${encodeURIComponent(query)}` : ""
+        }`
       );
       const data = await response.json();
       setTokens(data);
     } catch (error) {
-      console.error('Token search failed:', error);
+      console.error("Token search failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +62,7 @@ export const TokenSearchModal = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           autoFocus
         />
-        
+
         <div className="mt-4 max-h-96 overflow-y-auto">
           {isLoading ? (
             <div className="animate-pulse space-y-2">
@@ -87,15 +89,15 @@ export const TokenSearchModal = ({
                       className="object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = '/fallback-token-icon.png';
+                        target.src = "/fallback-token-icon.png";
                       }}
                       sizes="24px"
-                      unoptimized={!process.env.NEXT_PUBLIC_IMAGE_OPTIMIZATION}
+                      unoptimized={!process.env.NEXT_PRIVATE_IMAGE_OPTIMIZATION}
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {token.symbol?.charAt(0)?.toUpperCase() || '?'}
+                        {token.symbol?.charAt(0)?.toUpperCase() || "?"}
                       </span>
                     </div>
                   )}

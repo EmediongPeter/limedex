@@ -4,7 +4,6 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import TokenSelector from "./TokenSelect";
 import Button from "../ui/Button";
 import { QuoteResponse, TokenInfo } from "@/types/token-info";
-import TradingViewChart from "../chart/TradingViewChart";
 import TransactionHistory from "./TransactionHistory";
 import SlippageSettings from "./SlippageSettings";
 import { fetchSwapQuote, signAndExecuteSwap, fetchTokenPrice } from "@/utils/token-utils";
@@ -73,7 +72,7 @@ const getTradingViewSymbol = (token: TokenInfo): string | null => {
   const symbolMap: Record<string, string> = {
     'SOL': 'BINANCE:SOLUSDT',
     'USDC': 'BINANCE:USDCUSDT',
-    // Add more mappings for popular tokens here
+    // Add more mappings for pxopular tokens here
   };
   return symbolMap[token.symbol] || null;
 };
@@ -90,8 +89,6 @@ const SwapCard = () => {
   const { slippage } = useSettings();
   const solBalance = useGetBalance({ address: wallet.publicKey });
   const tokenAccounts = useGetTokenAccounts({ address: wallet.publicKey });
-  const transactionToast = useTransactionToast();
-  const notificationToast = useNotificationToast();
   const { showSuccessToast, showErrorToast, showLoadingToast } = useCustomToasts();
 
   // Use the swap context
@@ -669,7 +666,7 @@ const SwapCard = () => {
           const fromPriceData = await fetchTokenPrice(swapState.fromToken.address);
           setSwapState(prev => ({
             ...prev,
-            fromTokenUsdPrice: fromPriceData?.price || null
+            fromTokenUsdPrice: fromPriceData || null
           }));
         }
 
@@ -677,7 +674,7 @@ const SwapCard = () => {
           const toPriceData = await fetchTokenPrice(swapState.toToken.address);
           setSwapState(prev => ({
             ...prev,
-            toTokenUsdPrice: toPriceData?.price || null
+            toTokenUsdPrice: toPriceData || null
           }));
         }
       } catch (error) {
@@ -696,7 +693,8 @@ const SwapCard = () => {
         // Return the TradingView symbol for the token
         // This is now handled by the formatTradingViewSymbol utility
         return token?.symbol ? token.symbol : null;
-      }}>
+      }}
+    >
       <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-3xl shadow-md p-3 sm:p-4 md:p-6 w-full max-w-lg mx-auto transition-all duration-300">
         {/* From token input */}
         {/* 1. Responsive view of the navbar */}
@@ -705,17 +703,26 @@ const SwapCard = () => {
 
         <div className="bg-gray-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-3 border border-gray-200 dark:border-slate-700 mt-1">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            {/* <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               Swap
-            </h2>
-            <SlippageSettings />
-          </div>
-          <div className={`flex ${isMobile ? 'flex-col' : 'justify-between'} mb-2`}>
+            </h2> */}
             <span className="text-sm text-gray-500 dark:text-charcoal-400">
               You Pay
             </span>
+            <SlippageSettings />
+          </div>
+          <div
+            className={`flex ${isMobile ? "flex-col" : "justify-between"} mb-2`}
+          >
+            {/* <span className="text-sm text-gray-500 dark:text-charcoal-400">
+              You Pay
+            </span> */}
             {wallet.connected && contextFromToken && (
-              <div className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${isMobile ? 'mt-1' : ''}`}>
+              <div
+                className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${
+                  isMobile ? "mt-1" : ""
+                }`}
+              >
                 <span>Balance: {fromTokenBalance}</span>
                 {fromTokenBalanceUsd && (
                   <span className="ml-1 text-gray-400 dark:text-gray-500">
@@ -731,7 +738,7 @@ const SwapCard = () => {
                 type="text"
                 className="w-full bg-transparent text-2xl sm:text-3xl outline-none dark:text-white"
                 placeholder="0"
-                value={contextAmount || ''}
+                value={contextAmount || ""}
                 onChange={(e) => handleFromAmountChange(e.target.value)}
               />
               <TokenSelector
@@ -746,7 +753,11 @@ const SwapCard = () => {
               </div>
             )}
             {wallet.connected && parseFloat(fromTokenBalance) > 0 && (
-              <div className={`flex mt-2 ${isMobile ? 'grid grid-cols-2' : 'gap-2'}`}>
+              <div
+                className={`flex mt-2 ${
+                  isMobile ? "grid grid-cols-2" : "gap-2"
+                }`}
+              >
                 <button
                   onClick={handleHalfAmount}
                   className="bg-charcoal-700 text-charcoal-300 px-3 py-1.5 rounded-md text-sm hover:bg-charcoal-600 transition-colors duration-200 font-medium mr-2 sm:mr-0"
@@ -818,7 +829,10 @@ const SwapCard = () => {
             </div>
             {swapState.swapRate && parseFloat(swapState.swapRate) > 0 && (
               <div className="text-sm text-gray-500 dark:text-charcoal-400 mt-1 text-right">
-                {getTokenValueInUSD(swapState.swapRate, swapState.toTokenUsdPrice)}
+                {getTokenValueInUSD(
+                  swapState.swapRate,
+                  swapState.toTokenUsdPrice
+                )}
               </div>
             )}
           </div>

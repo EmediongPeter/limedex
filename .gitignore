@@ -38,4 +38,5 @@ tmp
 
 Dockerfile
 solana.ts
-*.txt
+dev
+.env

@@ -65,11 +65,12 @@ import toast from "react-hot-toast";
 // }
 export const fetchTokenPrice = async (mintAddress: string) => {
   const response = await fetch(
-    `https://api.jup.ag/price/v2?ids=${mintAddress}`
+    `https://lite-api.jup.ag/price/v3?ids=${mintAddress}`
   );
   if (!response.ok) throw new Error("Failed to fetch token price");
   const data = await response.json();
-  return data.data[mintAddress];
+
+  return data[mintAddress].usdPrice;
 };
 
 export const fetchSwapQuote = async (
@@ -83,14 +84,14 @@ export const fetchSwapQuote = async (
       inputMint,
       outputMint,
       amount,
-      restrictIntermediateTokens: 'true',
-      platformFeeBps: '15',
-      onlyDirectRoutes: 'true',
-      slippageBps: slippageBps.toString()
+      restrictIntermediateTokens: "true",
+      platformFeeBps: "15",
+      onlyDirectRoutes: "true",
+      slippageBps: slippageBps.toString(),
     });
 
     const swapRoutes = await fetch(
-      `https://api.jup.ag/swap/v1/quote?${params.toString()}`
+      `https://lite-api.jup.ag/swap/v1/quote?${params.toString()}`
     );
 
     // const quoteResponse = await axios.get('https://quote-api.jup.ag/v6/quote', {
@@ -241,7 +242,7 @@ export const signAndExxecuteSwap = async (
     wl: wallet?.publicKey.toString(),
     con: connection.rpcEndpoint,
   });
-  const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
+  const response = await axios.post("https://lite-api.jup.ag/swap/v1/swap", {
     quoteResponse,
     userPublicKey: wallet?.publicKey.toString(),
     wrapAndUnwrapSol: true,
@@ -434,19 +435,25 @@ export const signAndExecuteSwap = async (
         tokenProgram
       );
 
-      console.log({feeAccountOwner: feeAccountOwner.toString(), feeAccount:feeAccount.toString()})
-      // 2. Get fresh swap transaction (important for retries)
-      const response = await axios.post("https://api.jup.ag/swap/v1/swap", {
-        quoteResponse,
-        userPublicKey: wallet.publicKey.toString(),
-        wrapAndUnwrapSol: true,
-        // onlyDirectRoutes: true,
-        // asLegacyTransaction: true,
-        // network: "devnet",
-        feeAccount: feeAccount.toString()
-
-        // Include other parameters
+      console.log({
+        feeAccountOwner: feeAccountOwner.toString(),
+        feeAccount: feeAccount.toString(),
       });
+      // 2. Get fresh swap transaction (important for retries)
+      const response = await axios.post(
+        "https://lite-api.jup.ag/swap/v1/swap",
+        {
+          quoteResponse,
+          userPublicKey: wallet.publicKey.toString(),
+          wrapAndUnwrapSol: true,
+          // onlyDirectRoutes: true,
+          // asLegacyTransaction: true,
+          // network: "devnet",
+          feeAccount: feeAccount.toString(),
+
+          // Include other parameters
+        }
+      );
 
       const swapTransaction = VersionedTransaction.deserialize(
         Buffer.from(response.data.swapTransaction, "base64")
@@ -494,7 +501,7 @@ export const signAndExecuteSwap = async (
         throw new Error(`Transaction failed: ${result.value.err}`);
       } else {
         // toast.remove("transaction-loading");
-        console.log('')
+        console.log("");
       }
 
       return txid; // Success case

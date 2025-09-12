@@ -27,7 +27,7 @@ export const defaultClusters: Cluster[] = [
   {
     name: 'mainnet',
     endpoint: 'https://mainnet.helius-rpc.com/?api-key=3921c971-0628-4e75-aaa0-cd37bb038928',
-    // endpoint: ☻clusterApiUrl('mainnet-beta'),
+    // endpoint: clusterApiUrl('mainnet-beta'),
     network: ClusterNetwork.Mainnet,
   },
   {

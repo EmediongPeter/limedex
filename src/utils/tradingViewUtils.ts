@@ -34,7 +34,7 @@ export function formatTradingViewSymbol(
   const cleanSecond = cleanSymbol(secondSymbol);
   
   // Format as EXCHANGE:BASEQUOTE
-  return `${exchange}:${cleanFirst}${cleanSecond}`;
+  return `${cleanFirst}/${cleanSecond}`;
 }
 
 /**
