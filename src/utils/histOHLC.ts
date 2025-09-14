@@ -25,7 +25,7 @@ type GraphQLResp = {
 
 const BITQUERY_HTTP =
   process.env.NEXT_PRIVATE_BITQUERY_HTTP ?? "https://streaming.bitquery.io/eap"; // GraphQL over HTTP
-const BITQUERY_TOKEN = process.env.NEXT_PRIVATE_BITQUERY_API_KEY ?? "";
+const BITQUERY_TOKEN = process.env.NEXT_PUBLIC_BITQUERY_API_KEY ?? "";
 
 const TOKEN_DETAILS = `{
     Solana {
