@@ -7,7 +7,7 @@ import {
 
 const BITQUERY_WS =
   process.env.NEXT_PRIVATE_BITQUERY_WS ?? "wss://streaming.bitquery.io/eap";
-const BITQUERY_TOKEN = process.env.NEXT_PRIVATE_BITQUERY_API_KEY ?? "";
+const BITQUERY_TOKEN = process.env.NEXT_PUBLIC_BITQUERY_API_KEY ?? "";
 
 // So11111111111111111111111111111111111111112 6ft9XJZX7wYEH1aywspW5TiXDcshGc2W2SqBHN9SLAEJ
 
