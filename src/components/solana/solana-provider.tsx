@@ -128,8 +128,7 @@ const MobileWalletGuide = () => {
 export function SolanaProvider({ children }: { children: ReactNode }) {
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint =
-    process.env.NEXT_PRIVATE_SOLANA_RPC_URL ||
-    useMemo(() => clusterApiUrl(network), [network]);
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl(network);
   const isMobile = useIsMobile();
 
   const onError = useCallback((error: WalletError) => {
@@ -171,7 +170,7 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
       <WalletProvider
         wallets={wallets}
         onError={onError}
-        autoConnect={!isMobile}
+        autoConnect={true}
       >
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
